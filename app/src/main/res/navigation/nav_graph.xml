@@ -1,0 +1,17 @@
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    app:startDestination="@id/captureFragment">
+    <fragment
+        android:id="@+id/captureFragment"
+        android:name="cafe.plastic.documentscanner.ui.fragments.CaptureFragment"
+        android:label="capture_fragment"
+        tools:layout="@layout/capture_fragment" >
+        <action android:id="@+id/action_captureFragment_to_confirmFragment" app:destination="@id/confirmFragment" app:enterAnim="@anim/nav_default_enter_anim" app:exitAnim="@anim/nav_default_exit_anim" />
+    </fragment>
+    <fragment
+        android:id="@+id/confirmFragment"
+        android:name="cafe.plastic.documentscanner.ui.fragments.ConfirmationFragment"
+        android:label="confirm_fragment"
+        tools:layout="@layout/fragment_confirmation"></fragment>
+</navigation>
