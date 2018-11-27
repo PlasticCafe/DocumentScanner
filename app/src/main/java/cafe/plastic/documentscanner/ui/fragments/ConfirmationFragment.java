@@ -1,53 +1,40 @@
 package cafe.plastic.documentscanner.ui.fragments;
 
-import android.graphics.Bitmap;
+import android.graphics.Matrix;
 import android.os.Bundle;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
 import com.github.chrisbanes.photoview.PhotoView;
 
+import androidx.lifecycle.ViewModelProviders;
 import cafe.plastic.documentscanner.R;
+import timber.log.Timber;
 
 public class ConfirmationFragment extends Fragment {
-    private static final String ARG_PICTURE = "picture_param";
-    private static final String ARG_ROTATION = "rotation_param";
 
-    private Bitmap mPicture;
-    private Integer mRotation;
     private PhotoView takenPicture;
+    private CaptureViewModel mViewModel;
 
     public ConfirmationFragment() {
         // Required empty public constructor
     }
 
-    public static Bundle getArguments(Bitmap bitmap, Integer rotation) {
-        Bundle args = new Bundle();
-        args.putParcelable(ARG_PICTURE, bitmap);
-        args.putInt(ARG_ROTATION, rotation);
-        return args;
-    }
 
     public static ConfirmationFragment newInstance(Bundle arguments) {
-        if(!arguments.containsKey(ARG_PICTURE) || !arguments.containsKey(ARG_ROTATION)) {
-            throw new IllegalArgumentException();
-        }
         ConfirmationFragment fragment = new ConfirmationFragment();
-        fragment.setArguments(arguments);
         return fragment;
     }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if (getArguments() != null) {
-            mPicture = getArguments().getParcelable(ARG_PICTURE);
-            mRotation = getArguments().getInt(ARG_ROTATION);
-        }
     }
 
     @Override
@@ -61,6 +48,15 @@ public class ConfirmationFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         takenPicture = getView().findViewById(R.id.takenPicture);
-        takenPicture.setImageBitmap(mPicture);
+    }
+
+    @Override
+    public void onActivityCreated(@Nullable Bundle savedInstanceState) {
+        super.onActivityCreated(savedInstanceState);
+        mViewModel = ViewModelProviders.of(getActivity()).get(CaptureViewModel.class);
+        mViewModel.currentPhoto.observe(this, photo -> {
+            Timber.d("Got photo");
+            takenPicture.setImageBitmap(photo);
+        });
     }
 }

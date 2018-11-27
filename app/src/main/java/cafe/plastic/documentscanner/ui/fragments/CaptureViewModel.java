@@ -1,26 +1,31 @@
 package cafe.plastic.documentscanner.ui.fragments;
 
 import android.app.Application;
+import android.graphics.Bitmap;
 
 import androidx.databinding.ObservableField;
 import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LifecycleObserver;
-import cafe.plastic.documentscanner.R;
-import io.fotoapparat.configuration.CameraConfiguration;
-import io.fotoapparat.selector.FlashSelectorsKt;
-import io.fotoapparat.selector.FocusModeSelectorsKt;
+import androidx.lifecycle.MutableLiveData;
 
 public class CaptureViewModel extends AndroidViewModel implements LifecycleObserver {
 
-    public final ObservableField<Integer> flashStatus = new ObservableField<>(0);
-    public final ObservableField<CameraConfiguration> cameraConfiguration = new ObservableField<>();
+    public final MutableLiveData<CaptureFragment.CameraState> cameraState;
+    public final MutableLiveData<Bitmap> currentPhoto = new MutableLiveData<>();
+
     public CaptureViewModel(Application application) {
         super(application);
-        CameraConfiguration cameraConfiguration = new CameraConfiguration.Builder()
-                .flash(FlashSelectorsKt.off())
-                .focusMode(FocusModeSelectorsKt.autoFocus())
-                .build();
-        this.cameraConfiguration.set(cameraConfiguration);
+        cameraState = new MutableLiveData<>();
+        cameraState.setValue(new CaptureFragment.CameraState(
+                CaptureFragment.CameraState.Flash.ON,
+                CaptureFragment.CameraState.Focus.AUTO,
+                CaptureFragment.CameraState.Outline.OFF
+        ));
+    }
+
+    @Override
+    protected void onCleared() {
+        super.onCleared();
     }
 
 }

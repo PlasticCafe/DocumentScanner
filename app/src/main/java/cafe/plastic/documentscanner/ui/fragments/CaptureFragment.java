@@ -2,8 +2,7 @@ package cafe.plastic.documentscanner.ui.fragments;
 
 import android.Manifest;
 
-import androidx.databinding.Observable;
-import androidx.databinding.ObservableField;
+import androidx.constraintlayout.widget.ConstraintSet;
 import androidx.lifecycle.ViewModelProviders;
 
 import android.content.Context;
@@ -19,33 +18,67 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
+import androidx.transition.ChangeBounds;
+
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Toast;
+import android.view.animation.AnticipateOvershootInterpolator;
 
 import androidx.navigation.fragment.NavHostFragment;
+import androidx.transition.TransitionManager;
 import cafe.plastic.documentscanner.R;
 import cafe.plastic.documentscanner.databinding.CaptureFragmentBinding;
 import io.fotoapparat.Fotoapparat;
 import io.fotoapparat.configuration.CameraConfiguration;
-import io.fotoapparat.configuration.UpdateConfiguration;
 import io.fotoapparat.parameter.Flash;
-import io.fotoapparat.parameter.camera.convert.FlashConverterKt;
+import io.fotoapparat.parameter.FocusMode;
+import io.fotoapparat.result.Photo;
 import io.fotoapparat.selector.FlashSelectorsKt;
+import io.fotoapparat.selector.FocusModeSelectorsKt;
 import io.fotoapparat.view.CameraView;
+import io.reactivex.Observable;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.schedulers.Schedulers;
 import kotlin.jvm.functions.Function1;
 import timber.log.Timber;
 
-import static io.fotoapparat.selector.FlashSelectorsKt.off;
-import static io.fotoapparat.selector.FlashSelectorsKt.on;
 
 public class CaptureFragment extends Fragment {
     private static final String TAG = CaptureFragment.class.getSimpleName();
     private CaptureViewModel mViewModel;
     private Fotoapparat mFotoapparat;
     private CaptureFragmentBinding mCaptureFragmentBinding;
+    private boolean mCaptureLoading = false;
+
+    public static class CameraState {
+        public Flash flash;
+        public Focus focus;
+        public Outline outline;
+
+        public CameraState(Flash flash, Focus focus, Outline outline) {
+            this.flash = flash;
+            this.focus = focus;
+            this.outline = outline;
+        }
+
+        public enum Flash {
+            OFF,
+            ON,
+            AUTO
+        }
+
+        public enum Focus {
+            AUTO,
+            FIXED
+        }
+
+        public enum Outline {
+            ON,
+            OFF
+        }
+    }
 
     public static CaptureFragment newInstance() {
         return new CaptureFragment();
@@ -65,20 +98,15 @@ public class CaptureFragment extends Fragment {
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
         Timber.d("onActivityCreated");
-        setRetainInstance(true);
-        mViewModel = ViewModelProviders.of(this).get(CaptureViewModel.class);
+        mViewModel = ViewModelProviders.of(getActivity()).get(CaptureViewModel.class);
+        mViewModel.cameraState.observe(this, state -> rebuildConfig(state));
         mCaptureFragmentBinding.setViewmodel(mViewModel);
+        mCaptureFragmentBinding.setLifecycleOwner(this);
+
         requestPermissions(new String[]{Manifest.permission.CAMERA}, 0);
         mFotoapparat = Fotoapparat.with(getActivity())
                 .into((CameraView) getView().findViewById(R.id.camera_view))
                 .build();
-        mViewModel.cameraConfiguration.addOnPropertyChangedCallback(new Observable.OnPropertyChangedCallback() {
-            @Override
-            public void onPropertyChanged(Observable sender, int propertyId) {
-                mFotoapparat.updateConfiguration(((ObservableField<CameraConfiguration>) sender).get());
-                Timber.d("Configuration update callback called");
-            }
-        });
     }
 
     @Override
@@ -92,6 +120,8 @@ public class CaptureFragment extends Fragment {
         super.onResume();
         Timber.d("onResume");
         mFotoapparat.start();
+        rebuildConfig(mViewModel.cameraState.getValue());
+
     }
 
     @Override
@@ -113,6 +143,46 @@ public class CaptureFragment extends Fragment {
         Timber.d("onDestroy");
     }
 
+    private void rebuildConfig(CameraState cameraState) {
+        CameraConfiguration.Builder builder = new CameraConfiguration.Builder();
+        Function1<Iterable<? extends Flash>, Flash> flashMode;
+        Function1<Iterable<? extends FocusMode>, FocusMode> focusMode;
+        switch (cameraState.flash) {
+            case OFF:
+                Timber.d("Turning off flash");
+                flashMode = FlashSelectorsKt.off();
+                break;
+            case ON:
+                Timber.d("Turning on torch");
+                flashMode = FlashSelectorsKt.torch();
+                break;
+            case AUTO:
+                Timber.d("Setting flash to auto");
+                flashMode = FlashSelectorsKt.autoFlash();
+                break;
+            default:
+                flashMode = FlashSelectorsKt.off();
+        }
+
+        switch (cameraState.focus) {
+            case AUTO:
+                Timber.d("Setting focus to automatic");
+                focusMode = FocusModeSelectorsKt.autoFocus();
+                break;
+            case FIXED:
+                Timber.d("Setting focus to fixed");
+                focusMode = FocusModeSelectorsKt.fixed();
+                break;
+            default:
+                focusMode = FocusModeSelectorsKt.fixed();
+        }
+
+        builder.flash(flashMode);
+        builder.focusMode(focusMode);
+        Timber.d("Rebuilding config");
+        mFotoapparat.updateConfiguration(builder.build());
+    }
+
     public class Handlers {
         private Context mContext;
 
@@ -121,42 +191,90 @@ public class CaptureFragment extends Fragment {
         }
 
         public void onCaptureButtonClicked(View view) {
-            Toast.makeText(mContext, "Capture clicked", Toast.LENGTH_LONG).show();
+            toggleCaptureLoading();
             mFotoapparat.takePicture().toPendingResult().whenDone(photo -> {
                 Log.d(TAG, "Got photo");
-                byte[] photoBytes = photo.encodedImage;
-                int rotation = photo.rotationDegrees;
-                Bitmap bitmap = BitmapFactory.decodeByteArray(photoBytes, 0, photoBytes.length);
-                Matrix matrix = new Matrix();
-                matrix.postRotate(rotation * -1);
-                Bitmap rotatedBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, false);
-                Bundle args = ConfirmationFragment
-                        .getArguments(rotatedBitmap, rotation);
-                NavHostFragment
-                        .findNavController(CaptureFragment.this)
-                        .navigate(R.id.action_captureFragment_to_confirmFragment, args);
+                Observable.just(photo)
+                        .observeOn(Schedulers.computation())
+                        .map(p -> processPhoto(p))
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe(b -> {
+                            mViewModel.currentPhoto.setValue(b);
+                            NavHostFragment.findNavController(CaptureFragment.this)
+                                    .navigate(R.id.action_captureFragment_to_confirmFragment);
+                            toggleCaptureLoading();
+                        });
             });
         }
 
         public void onFlashButtonClicked(View view) {
-            CameraConfiguration currentConfig = mViewModel.cameraConfiguration.get();
-            Function1<Iterable<? extends Flash>, Flash> flashMode = mViewModel.cameraConfiguration.get().getFlashMode();
-            CameraConfiguration.Builder configBuilder = new CameraConfiguration.Builder();
-            currentConfig.
-            if (mode.equals(FlashSelectorsKt.on().invoke(null))) {
-                configBuilder.flash(FlashSelectorsKt.autoFlash());
-            } else if (mode.equals(FlashSelectorsKt.off().invoke(null))) {
-                configBuilder.flash(FlashSelectorsKt.on());
-            } else {
-                configBuilder.flash(FlashSelectorsKt.off());
-                Timber.d("onFlashButtonClicked: Default condition chosen");
+            CameraState cameraState = mViewModel.cameraState.getValue();
+            switch (cameraState.flash) {
+                case OFF:
+                    cameraState.flash = CameraState.Flash.ON;
+                    break;
+                case ON:
+                    cameraState.flash = CameraState.Flash.AUTO;
+                    break;
+                case AUTO:
+                    cameraState.flash = CameraState.Flash.OFF;
+                    break;
+                default:
+                    cameraState.flash = CameraState.Flash.OFF;
+                    break;
             }
-
-            mViewModel.cameraConfiguration.set(configBuilder.build());
+            mViewModel.cameraState.setValue(cameraState);
         }
 
+        public void onFocusButtonClicked(View view) {
+            CameraState cameraState = mViewModel.cameraState.getValue();
+            switch (cameraState.focus) {
+                case AUTO:
+                    cameraState.focus = CameraState.Focus.FIXED;
+                    break;
+                case FIXED:
+                    cameraState.focus = CameraState.Focus.AUTO;
+                    break;
+                default:
+                    cameraState.focus = CameraState.Focus.FIXED;
+            }
+            mViewModel.cameraState.setValue(cameraState);
+        }
 
+        public void onSettingsButtonClicked(View view) {
+            ConstraintSet constraint1 = new ConstraintSet();
+            constraint1.clone(getActivity(), R.layout.capture_fragment_menu_open);
+            ChangeBounds transition = new ChangeBounds();
+            transition.setInterpolator(new AnticipateOvershootInterpolator(1.0f));
+            transition.setDuration(1200);
+            TransitionManager.beginDelayedTransition(mCaptureFragmentBinding.constraintLayout, transition);
+            constraint1.applyTo(mCaptureFragmentBinding.constraintLayout);
+            rebuildConfig(mViewModel.cameraState.getValue());
+        }
+    }
+
+    private void toggleCaptureLoading() {
+        if (mCaptureLoading) {
+            Timber.d("Hiding loading UI");
+            mCaptureFragmentBinding.uigroup.setVisibility(View.VISIBLE);
+            mCaptureFragmentBinding.loadinggroup.setVisibility(View.GONE);
+            mCaptureLoading = false;
+        } else {
+            Timber.d("Throwing up loading UI");
+            mCaptureFragmentBinding.uigroup.setVisibility(View.GONE);
+            mCaptureFragmentBinding.loadinggroup.setVisibility(View.VISIBLE);
+            mCaptureLoading = true;
+        }
+    }
+
+    private Bitmap processPhoto(Photo photo) {
+        byte[] photoBytes = photo.encodedImage;
+        int rotation = photo.rotationDegrees;
+        Bitmap bitmap = BitmapFactory.decodeByteArray(photoBytes, 0, photoBytes.length);
+        Matrix matrix = new Matrix();
+        matrix.postRotate(rotation * -1);
+        Bitmap rotatedBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, false);
+        return rotatedBitmap;
     }
 }
 
-            configBuilder.focusMode(currentConfig.getFocusMode());
