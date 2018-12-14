@@ -6,6 +6,10 @@ import timber.log.Timber;
 
 public class DocumentScannerApplication extends Application {
 
+    static {
+        System.loadLibrary("opencv_java4");
+        System.loadLibrary("native-lib");
+    }
     @Override
     public void onCreate() {
         super.onCreate();

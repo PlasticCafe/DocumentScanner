@@ -38,6 +38,7 @@
             android:id="@+id/camera_view"
             android:layout_width="0dp"
             android:layout_height="0dp"
+            android:onClickListener="@{handlers::onMenuClosed}"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintHorizontal_bias="1.0"
@@ -47,21 +48,14 @@
 
         </io.fotoapparat.view.CameraView>
 
-        <ImageButton
-            android:id="@+id/captureButton"
-            android:layout_width="76dp"
-            android:layout_height="76dp"
-            android:layout_marginStart="8dp"
-            android:layout_marginEnd="8dp"
-            android:layout_marginBottom="10dp"
-            android:background="@drawable/circular_background_selector"
-            android:onClickListener="@{handlers::onCaptureButtonClicked}"
-            android:padding="10dp"
-            android:scaleType="fitCenter"
+        <cafe.plastic.documentscanner.ui.views.FeatureOverlay
+            android:id="@+id/featureOverlay"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:srcCompat="@drawable/baseline_camera_alt_white_48" />
+            app:layout_constraintTop_toTopOf="parent" />
 
         <ImageButton
             android:id="@+id/settingsButton"
@@ -70,7 +64,7 @@
             android:layout_marginStart="32dp"
             android:layout_marginBottom="8dp"
             android:background="@drawable/circular_background_selector"
-            android:onClickListener="@{handlers::onSettingsButtonClicked}"
+            android:onClickListener="@{handlers::onMenuOpened}"
             app:layout_constraintBottom_toBottomOf="@+id/captureButton"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="@+id/captureButton"
@@ -94,10 +88,13 @@
             android:id="@+id/popupMenuBackground"
             android:layout_width="96dp"
             android:layout_height="0dp"
+            android:layout_marginEnd="8dp"
             android:background="@color/popupMenuBackground"
             android:paddingRight="0dp"
+            android:clickable="true"
+            android:focusable="true"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintVertical_bias="1.0" />
 
@@ -108,6 +105,7 @@
             android:layout_marginTop="8dp"
             android:background="@drawable/circular_background_selector_pressed_only"
             android:scaleType="center"
+            android:onClickListener="@{handlers::onMenuClosed}"
             app:layout_constraintEnd_toEndOf="@+id/popupMenuBackground"
             app:layout_constraintStart_toStartOf="@id/popupMenuBackground"
             app:layout_constraintTop_toTopOf="parent"
@@ -117,7 +115,7 @@
             android:id="@+id/flashToggle"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            android:layout_marginTop="24dp"
+            android:layout_marginTop="48dp"
             android:background="@drawable/circular_background_selector"
             android:onClickListener="@{handlers::onFlashButtonClicked}"
             android:padding="5dp"
@@ -192,5 +190,21 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
+
+        <ImageButton
+            android:id="@+id/captureButton"
+            android:layout_width="76dp"
+            android:layout_height="76dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginBottom="16dp"
+            android:background="@drawable/circular_background_selector"
+            android:onClickListener="@{handlers::onCaptureButtonClicked}"
+            android:padding="10dp"
+            android:scaleType="fitCenter"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:srcCompat="@drawable/baseline_camera_alt_white_48" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 </layout>

@@ -17,7 +17,7 @@ public class CaptureViewModel extends AndroidViewModel implements LifecycleObser
         super(application);
         cameraState = new MutableLiveData<>();
         cameraState.setValue(new CaptureFragment.CameraState(
-                CaptureFragment.CameraState.Flash.ON,
+                CaptureFragment.CameraState.Flash.OFF,
                 CaptureFragment.CameraState.Focus.AUTO,
                 CaptureFragment.CameraState.Outline.OFF
         ));
