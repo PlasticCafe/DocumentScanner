@@ -51,9 +51,6 @@ import io.reactivex.schedulers.Schedulers;
 import kotlin.jvm.functions.Function1;
 import timber.log.Timber;
 
-import static org.opencv.imgproc.Imgproc.warpAffine;
-
-
 public class CaptureFragment extends Fragment {
     private static final String TAG = CaptureFragment.class.getSimpleName();
     private CaptureViewModel mViewModel;
@@ -124,6 +121,7 @@ public class CaptureFragment extends Fragment {
         mFotoapparat = Fotoapparat.with(getActivity())
                 .into((CameraView) getView().findViewById(R.id.camera_view))
                 .previewScaleType(ScaleType.CenterCrop)
+                .previewResolution(ResolutionSelectorsKt.lowestResolution())
                 .frameProcessor(mObjectTracker)
                 .build();
         Timber.d(stringFromJNI());
@@ -146,6 +144,7 @@ public class CaptureFragment extends Fragment {
         mCompositeDisposable.add(mObjectTracker.processedOutput()
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(rects -> {
+                    Timber.d("Got updated roi");
                     mCaptureFragmentBinding.featureOverlay.updateRects(rects);
                 }));
         mCompositeDisposable.add(mObjectTracker.currentFrameSize()
@@ -173,6 +172,7 @@ public class CaptureFragment extends Fragment {
     public void onDestroy() {
         super.onDestroy();
         Timber.d("onDestroy");
+        mObjectTracker.close();
     }
 
     private void rebuildConfig(CameraState cameraState) {
@@ -209,7 +209,7 @@ public class CaptureFragment extends Fragment {
                 focusMode = FocusModeSelectorsKt.fixed();
         }
         Timber.d("Rebuilding config");
-        mCameraConfiguration = builder.build();
+        mCameraConfiguration = builder.previewResolution(ResolutionSelectorsKt.lowestResolution()).build();
         updateConfiguration();
     }
 

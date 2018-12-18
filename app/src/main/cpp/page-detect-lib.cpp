@@ -1,5 +1,6 @@
 #include <jni.h>
 #include <string>
+#include "Rectangle.h"
 #include "PageDetector.h"
 
 extern "C"
@@ -22,7 +23,7 @@ jobject resultsToArrayList(JNIEnv *env, std::vector<Rectangle> vecRectangle) {
                                       vecRectangle[i].getY(),
                                       vecRectangle[i].getX2(),
                                       vecRectangle[i].getY2());
-        env->CallVoidMethod(arrayList, env->GetMethodID(arrayListClass, "add", "(java/lang/Object)V"), rect);
+        env->CallBooleanMethod(arrayList, env->GetMethodID(arrayListClass, "add", "(Ljava/lang/Object;)Z"), rect);
     }
     return arrayList;
 }
@@ -60,7 +61,7 @@ Java_cafe_plastic_documentscanner_vision_PageDetector_Initialize(JNIEnv *env, jo
                                                                  jint right, jint bottom) {
     jbyte *frame = env->GetByteArrayElements(frame_, NULL);
     jsize size = env->GetArrayLength(frame_);
-    std::vector<uint8_t> vecFrame((uint8_t) frame, (uint8_t) (frame + size));
+    std::vector<uint8_t> vecFrame((uint8_t*) frame, (uint8_t*) (frame + size));
     cv::Rect2d roi = cv::Rect2d(left, top, right - left, bottom - top);
     PageDetector *pageDetector = getPointer(env, instance);
     pageDetector->initialize(vecFrame, roi, width, height, rotation);
@@ -74,7 +75,7 @@ Java_cafe_plastic_documentscanner_vision_PageDetector_Detect(JNIEnv *env, jobjec
                                                              jint height, jint rotation) {
     jbyte *frame = env->GetByteArrayElements(frame_, NULL);
     jsize size = env->GetArrayLength(frame_);
-    std::vector<uint8_t> vecFrame((uint8_t) frame, (uint8_t) (frame + size));
+    std::vector<uint8_t> vecFrame((uint8_t*) frame, (uint8_t*) (frame + size));
     PageDetector *pageDetector = getPointer(env, instance);
     std::vector<Rectangle> results = pageDetector->detect(vecFrame, width, height, rotation);
     env->ReleaseByteArrayElements(frame_, frame, 0);

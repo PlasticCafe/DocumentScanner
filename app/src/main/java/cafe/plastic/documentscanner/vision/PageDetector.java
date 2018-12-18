@@ -15,7 +15,7 @@ public class PageDetector {
     private native List<Rect> Detect(byte[] frame, int width, int height, int rotation);
 
     public PageDetector() {
-        Create();
+        mHandle = Create();
     }
 
     public void initialize(Frame frame, Rect trackingRegion) {
@@ -25,11 +25,11 @@ public class PageDetector {
                 frame.getImage(),
                 frame.getSize().width,
                 frame.getSize().height,
+                frame.getRotation(),
                 trackingRegion.left,
                 trackingRegion.top,
                 trackingRegion.right,
-                trackingRegion.bottom,
-                frame.getRotation()
+                trackingRegion.bottom
                 );
     }
 
