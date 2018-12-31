@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.Point;
 import android.graphics.Rect;
 import android.util.AttributeSet;
@@ -16,9 +17,10 @@ import androidx.annotation.Nullable;
 import timber.log.Timber;
 
 public class FeatureOverlay extends View {
-    private List<Rect> mCurrentRects;
+    private List<Point> mCurrentRoi;
     private OnRegionSelectedListener mRegionSelectedCallback;
     private Point mCurrentResolution;
+    private int mCurrentRotation = 0;
     private Paint mPointPaint;
     private Paint mBackgroundPaint;
     private Bitmap mCurrentBitmap;
@@ -30,6 +32,7 @@ public class FeatureOverlay extends View {
         mCurrentResolution = new Point(1, 1);
         mPointPaint = new Paint();
         mPointPaint.setColor(0x22ff0000);
+        mPointPaint.setStrokeWidth(5.0f);
         mBackgroundPaint = new Paint();
         mBackgroundPaint.setColor(0x80f8efff);
     }
@@ -87,27 +90,23 @@ public class FeatureOverlay extends View {
     @Override
     public void draw(Canvas canvas) {
         super.draw(canvas);
-        if (mCurrentRects != null) {
-            for (Rect rect : mCurrentRects) {
-                canvas.drawRect(calculateRectOnScreen(rect), mBackgroundPaint);
+        if (mCurrentRoi != null && mCurrentRoi.size() == 4) {
+            Path path = new Path();
+            path.moveTo(
+                    pointToScreen(rotatePoint(mCurrentRoi.get(0))).x,
+                    pointToScreen(rotatePoint(mCurrentRoi.get(0))).y);
+            for (int i = 1; i <= mCurrentRoi.size(); i++) {
+                path.lineTo(
+                        pointToScreen(rotatePoint(mCurrentRoi.get(i % mCurrentRoi.size()))).x,
+                        pointToScreen(rotatePoint(mCurrentRoi.get(i % mCurrentRoi.size()))).y);
             }
-        }
-        if (mCurrentSelection != null) {
-            canvas.drawRect(mCurrentSelection.toRect(), mPointPaint);
-        }
-
-        if (mCurrentBitmap != null) {
-            canvas.drawBitmap(mCurrentBitmap, null, scaleOverlay(), mBackgroundPaint);
+            path.close();
+            canvas.drawPath(path, mPointPaint);
         }
     }
 
-    public void updateRects(List<Rect> rects) {
-        mCurrentRects = rects;
-        invalidate();
-    }
-
-    public void updateBitmap(Bitmap bitmap) {
-        mCurrentBitmap = bitmap;
+    public void updateRoi(List<Point> roi) {
+        mCurrentRoi = roi;
         invalidate();
     }
 
@@ -119,16 +118,54 @@ public class FeatureOverlay extends View {
         mCurrentResolution = new Point(frame);
     }
 
+    public void setCurrentRotation(int rotation) {
+        mCurrentRotation = rotation;
+    }
+
     public interface OnRegionSelectedListener {
         void onRegionSelected(Rect region);
     }
 
+    private Point pointToScreen(Point point) {
+        float scale = Math.max((float) this.getMeasuredWidth() / mCurrentResolution.y,
+                (float) this.getMeasuredHeight() / mCurrentResolution.x);
+        int width = (int) (mCurrentResolution.y * scale);
+        int height = (int) (mCurrentResolution.x * scale);
+
+        int excessX = Math.max(0, (width - this.getMeasuredWidth()) / 2);
+        int excessY = Math.max(0, (height - this.getMeasuredHeight()) / 2);
+        Point screenPoint = new Point((int) (point.x * scale) - excessX, (int) (point.y * scale) - excessY);
+        return screenPoint;
+    }
+
+    private Point rotatePoint(Point pointIn) {
+        Point point = new Point (pointIn.x, pointIn.y);
+        int x = point.x;
+        int y = point.y;
+        switch(mCurrentRotation) {
+            case (90):
+                point.x = y;
+                point.y = mCurrentResolution.x - x;
+                break;
+            case (180):
+                point.x = mCurrentResolution.x - x;
+                point.y = mCurrentResolution.y - y;
+                break;
+            case (270):
+                point.x = mCurrentResolution.y - y;
+                point.y = x;
+                break;
+            default:
+                break;
+        }
+        return point;
+    }
 
     private Rect calculateRectOnFrame(Rect screenRect) {
         float scale = Math.min((float) mCurrentResolution.x / this.getMeasuredWidth(),
                 (float) mCurrentResolution.y / this.getMeasuredHeight());
 
-        int width =  (int) (this.getMeasuredWidth() * scale);
+        int width = (int) (this.getMeasuredWidth() * scale);
         int height = (int) (this.getMeasuredHeight() * scale);
 
         int excessX = Math.max(0, (mCurrentResolution.x - width) / 2);
@@ -142,8 +179,8 @@ public class FeatureOverlay extends View {
     }
 
     private Rect calculateRectOnScreen(Rect frameRect) {
-        float scale = Math.max((float) this.getMeasuredWidth()/ mCurrentResolution.x,
-                (float)this.getMeasuredHeight() / mCurrentResolution.y);
+        float scale = Math.max((float) this.getMeasuredWidth() / mCurrentResolution.x,
+                (float) this.getMeasuredHeight() / mCurrentResolution.y);
         int width = (int) (mCurrentResolution.x * scale);
         int height = (int) (mCurrentResolution.y * scale);
 

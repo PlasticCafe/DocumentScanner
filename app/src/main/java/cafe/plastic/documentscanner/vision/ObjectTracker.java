@@ -1,42 +1,28 @@
 package cafe.plastic.documentscanner.vision;
 
+import android.graphics.Point;
 import android.graphics.Rect;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import io.fotoapparat.preview.Frame;
+import io.fotoapparat.result.Photo;
 import io.reactivex.Flowable;
 
-public class ObjectTracker extends VisionFrameProcessor<List<Rect>> {
-    private List<Rect> trackingRegions = new ArrayList<>();
-    private boolean initialized = false;
+public class ObjectTracker extends VisionFrameProcessor<PageDetector.Region> {
     private PageDetector mPageDetector = new PageDetector();
 
     @Override
-    public Flowable<List<Rect>> processedOutput() {
+    public Flowable<PageDetector.Region> processedOutput() {
         return mFrames.map(f -> processNative(f));
-    }
-
-    public void setTrackingRegion(Rect rect) {
-        trackingRegions.clear();
-        trackingRegions.add(rect);
     }
 
     public void close() {
         mPageDetector.release();
     }
 
-    private List<Rect> processNative(Frame frame) {
-        if (trackingRegions.size() > 0) {
-            mPageDetector.initialize(frame, trackingRegions.get(0));
-            trackingRegions.clear();
-            initialized = true;
-        }
-        if (initialized) {
-            return mPageDetector.detect(frame);
-        } else {
-            return new ArrayList<>();
-        }
+    private PageDetector.Region processNative(Frame frame) {
+        return mPageDetector.detect(frame.getImage(), frame.getSize().width, frame.getSize().height, frame.getRotation());
     }
 }

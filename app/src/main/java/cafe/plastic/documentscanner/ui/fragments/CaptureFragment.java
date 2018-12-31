@@ -12,7 +12,10 @@ import androidx.databinding.DataBindingUtil;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
 import android.graphics.Matrix;
+import android.graphics.Paint;
+import android.graphics.Point;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
@@ -28,16 +31,20 @@ import android.view.ViewGroup;
 import android.view.animation.AnticipateOvershootInterpolator;
 
 
+import java.util.List;
+
 import androidx.navigation.fragment.NavHostFragment;
 import androidx.transition.TransitionManager;
 import cafe.plastic.documentscanner.R;
 import cafe.plastic.documentscanner.databinding.CaptureFragmentBinding;
 import cafe.plastic.documentscanner.vision.ObjectTracker;
+import cafe.plastic.documentscanner.vision.PageDetector;
 import io.fotoapparat.Fotoapparat;
 import io.fotoapparat.configuration.CameraConfiguration;
 import io.fotoapparat.parameter.Flash;
 import io.fotoapparat.parameter.FocusMode;
 import io.fotoapparat.parameter.ScaleType;
+import io.fotoapparat.preview.Frame;
 import io.fotoapparat.result.Photo;
 import io.fotoapparat.selector.FlashSelectorsKt;
 import io.fotoapparat.selector.FocusModeSelectorsKt;
@@ -47,7 +54,9 @@ import io.fotoapparat.view.CameraView;
 import io.reactivex.Observable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.CompositeDisposable;
+import io.reactivex.processors.PublishProcessor;
 import io.reactivex.schedulers.Schedulers;
+import io.reactivex.subjects.PublishSubject;
 import kotlin.jvm.functions.Function1;
 import timber.log.Timber;
 
@@ -62,8 +71,9 @@ public class CaptureFragment extends Fragment {
     private boolean mButtonsHidden = false;
     private ObjectTracker mObjectTracker = new ObjectTracker();
     private CompositeDisposable mCompositeDisposable = new CompositeDisposable();
+    private PublishProcessor<Photo> mPhotoObserver = PublishProcessor.create();
+    private int lockCounter = 0;
 
-    private native String stringFromJNI();
     public static class CameraState {
         public Flash flash;
         public Focus focus;
@@ -114,17 +124,13 @@ public class CaptureFragment extends Fragment {
         mViewModel.cameraState.observe(this, state -> rebuildConfig(state));
         mCaptureFragmentBinding.setViewmodel(mViewModel);
         mCaptureFragmentBinding.setLifecycleOwner(this);
-        mCaptureFragmentBinding.featureOverlay.setOnRegionSelectedListener(r -> {
-            mObjectTracker.setTrackingRegion(r);
-        });
         requestPermissions(new String[]{Manifest.permission.CAMERA}, 0);
         mFotoapparat = Fotoapparat.with(getActivity())
                 .into((CameraView) getView().findViewById(R.id.camera_view))
                 .previewScaleType(ScaleType.CenterCrop)
-                .previewResolution(ResolutionSelectorsKt.lowestResolution())
+                .previewResolution(ResolutionSelectorsKt.highestResolution())
                 .frameProcessor(mObjectTracker)
                 .build();
-        Timber.d(stringFromJNI());
     }
 
 
@@ -143,15 +149,46 @@ public class CaptureFragment extends Fragment {
         updateConfiguration();
         mCompositeDisposable.add(mObjectTracker.processedOutput()
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(rects -> {
-                    Timber.d("Got updated roi");
-                    mCaptureFragmentBinding.featureOverlay.updateRects(rects);
+                .subscribe(region -> {
+                    mCaptureFragmentBinding.featureOverlay.updateRoi(region.roi);
+                    switch (region.state) {
+                        case NONE:
+                            lockCounter = 0;
+                            break;
+                        case PERSPECTIVE:
+                            lockCounter = 0;
+                            break;
+                        case SIZE:
+                            lockCounter = 0;
+                            break;
+                        case LOCKED:
+                            lockCounter++;
+                            Timber.d("Ready for main region capture");
+                    }
+                    if (lockCounter > 20) {
+                        capture();
+                    }
                 }));
-        mCompositeDisposable.add(mObjectTracker.currentFrameSize()
+        mCompositeDisposable.add(mObjectTracker.getFrames()
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(p -> {
-                    mCaptureFragmentBinding.featureOverlay.setFrameResolution(p);
+                .subscribe(f -> {
+                    mCaptureFragmentBinding.featureOverlay.setFrameResolution(new Point(f.getSize().width, f.getSize().height));
+                    mCaptureFragmentBinding.featureOverlay.setCurrentRotation(f.getRotation());
                 }));
+        mCompositeDisposable
+                .add(Observable
+                        .combineLatest(mPhotoObserver.toObservable(),
+                                mObjectTracker.processedOutput().toObservable()
+                                        .filter(r -> r.state == PageDetector.State.LOCKED),
+                                mObjectTracker.getFrames().toObservable(),
+                                this::processPhoto)
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe(b -> {
+                            mViewModel.currentPhoto.setValue(b);
+                            NavHostFragment.findNavController(CaptureFragment.this)
+                                    .navigate(R.id.action_captureFragment_to_confirmFragment);
+                            toggleCaptureLoading();
+                        }));
     }
 
     @Override
@@ -209,7 +246,7 @@ public class CaptureFragment extends Fragment {
                 focusMode = FocusModeSelectorsKt.fixed();
         }
         Timber.d("Rebuilding config");
-        mCameraConfiguration = builder.previewResolution(ResolutionSelectorsKt.lowestResolution()).build();
+        mCameraConfiguration = builder.previewResolution(ResolutionSelectorsKt.highestResolution()).build();
         updateConfiguration();
     }
 
@@ -222,6 +259,14 @@ public class CaptureFragment extends Fragment {
         }
     }
 
+    private void capture() {
+        toggleCaptureLoading();
+        mFotoapparat.takePicture().toPendingResult().whenDone(photo -> {
+            Log.d(TAG, "Got photo");
+            mPhotoObserver.onNext(photo);
+        });
+    }
+
 
     public class Handlers {
         private Context mContext;
@@ -231,20 +276,7 @@ public class CaptureFragment extends Fragment {
         }
 
         public void onCaptureButtonClicked(View view) {
-            toggleCaptureLoading();
-            mFotoapparat.takePicture().toPendingResult().whenDone(photo -> {
-                Log.d(TAG, "Got photo");
-                Observable.just(photo)
-                        .observeOn(Schedulers.computation())
-                        .map(p -> processPhoto(p))
-                        .observeOn(AndroidSchedulers.mainThread())
-                        .subscribe(b -> {
-                            mViewModel.currentPhoto.setValue(b);
-                            NavHostFragment.findNavController(CaptureFragment.this)
-                                    .navigate(R.id.action_captureFragment_to_confirmFragment);
-                            toggleCaptureLoading();
-                        });
-            });
+            capture();
         }
 
         public void onFlashButtonClicked(View view) {
@@ -333,14 +365,30 @@ public class CaptureFragment extends Fragment {
         }
     }
 
-    private Bitmap processPhoto(Photo photo) {
+    private Bitmap processPhoto(Photo photo, PageDetector.Region roi, Frame frame) {
         byte[] photoBytes = photo.encodedImage;
         int rotation = photo.rotationDegrees;
+        List<Point> points = roi.roi;
         Bitmap bitmap = BitmapFactory.decodeByteArray(photoBytes, 0, photoBytes.length);
+        double scale = (double)bitmap.getWidth()/ frame.getSize().width;
         Matrix matrix = new Matrix();
-        matrix.postRotate(rotation * -1);
-        Bitmap rotatedBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, false);
-        return rotatedBitmap;
+        bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, false);
+        roi.scale(scale);
+        Point dims = roi.getDimensions();
+        Bitmap processed = Bitmap.createBitmap(dims.x, dims.y, Bitmap.Config.ARGB_8888);
+        Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+        Canvas c = new Canvas(processed);
+        Matrix warp = new Matrix();
+        float[] src = roi.toFloatArray();
+        float[] dst = {
+                0, 0,
+                dims.x, 0,
+                dims.x, dims.y,
+                0, dims.y
+        };
+        warp.setPolyToPoly(src, 0, dst, 0, 4);
+        c.drawBitmap(bitmap, warp, p);
+        return processed;
     }
 }
 
