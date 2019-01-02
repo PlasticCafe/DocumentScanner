@@ -1,11 +1,15 @@
 package cafe.plastic.documentscanner.vision;
 
+import android.graphics.Bitmap;
 import android.graphics.Point;
 import android.graphics.Rect;
+import android.util.Size;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import io.fotoapparat.preview.Frame;
+import io.fotoapparat.result.Photo;
 
 public class PageDetector {
     private long mHandle;
@@ -15,7 +19,7 @@ public class PageDetector {
 
     private native long Create();
     private native void Release();
-    private native List<Point> GetRoi(byte[] frame, int width, int height, int rotation);
+    private native ArrayList<Point> GetRoi(byte[] frame, int width, int height, int rotation);
     private native float GetArea(List<Point> roi);
     private native float GetDistortion(List<Point> roi);
     public enum State {
@@ -25,9 +29,17 @@ public class PageDetector {
         NONE
     }
 
-    public class Region {
+    public static class Region {
         public State state;
-        public List<Point> roi;
+        public ArrayList<Point> roi;
+        public Size frameSize;
+        public int rotation;
+        public Region(State state, ArrayList<Point> roi, Size frameSize, int rotation) {
+            this.state = state;
+            this.roi = roi;
+            this.frameSize = frameSize;
+            this.rotation = rotation;
+        }
 
         public Point getDimensions() {
             if(roi.size() != 4) return new Point(0, 0);
@@ -77,20 +89,19 @@ public class PageDetector {
     public Region detect(byte[] frame, int width, int height, int rotation) {
         if(released)
             throw new IllegalStateException("Detector has been released");
-        Region region = new Region();
-        region.roi = GetRoi(frame, width, height, rotation);
-        if(region.roi.size() != 4) {
-            region.state = State.NONE;
-        } else if(distorted(region.roi)) {
-            region.state = State.PERSPECTIVE;
-        } else if(frameArea(width, height, region.roi) < 0.30) {
-            region.state = State.SIZE;
+        ArrayList<Point> roi = GetRoi(frame, width, height, rotation);
+        State state;
+        if(roi.size() != 4) {
+            state = State.NONE;
+        } else if(distorted(roi)) {
+            state = State.PERSPECTIVE;
+        } else if(frameArea(width, height, roi) < 0.30) {
+            state = State.SIZE;
         } else {
-            region.state= State.LOCKED;
+            state= State.LOCKED;
         }
-        return region;
+        return new Region(state, roi, new Size(width, height), rotation);
     }
-
 
     public void release() {
         if(!released)

@@ -10,17 +10,14 @@ import androidx.lifecycle.MutableLiveData;
 
 public class CaptureViewModel extends AndroidViewModel implements LifecycleObserver {
 
-    public final MutableLiveData<CaptureFragment.CameraState> cameraState;
+    public final MutableLiveData<CameraState.Flash> flashState = new MutableLiveData<>();
+    public final MutableLiveData<CameraState.Outline> outlineState = new MutableLiveData<>();
     public final MutableLiveData<Bitmap> currentPhoto = new MutableLiveData<>();
 
     public CaptureViewModel(Application application) {
         super(application);
-        cameraState = new MutableLiveData<>();
-        cameraState.setValue(new CaptureFragment.CameraState(
-                CaptureFragment.CameraState.Flash.OFF,
-                CaptureFragment.CameraState.Focus.AUTO,
-                CaptureFragment.CameraState.Outline.OFF
-        ));
+        flashState.setValue(CameraState.Flash.OFF);
+        outlineState.setValue(CameraState.Outline.ON);
     }
 
     @Override

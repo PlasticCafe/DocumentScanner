@@ -3,32 +3,12 @@
 #include "Rectangle.h"
 #include "PageDetector.h"
 
-extern "C"
 PageDetector *getPointer(JNIEnv *env, jobject instance) {
     jclass c = env->GetObjectClass(instance);
     jfieldID handle = env->GetFieldID(c, "mHandle", "J");
     return reinterpret_cast<PageDetector *>(env->GetLongField(instance, handle));
 }
 
-extern "C"
-jobject resultsToArrayList(JNIEnv *env, std::vector<cv::Point> roi) {
-    jclass arrayListClass = env->FindClass("java/util/ArrayList");
-    jclass pointClass = env->FindClass("android/graphics/Point");
-
-    jobject arrayList = env->NewObject(arrayListClass,
-                                       env->GetMethodID(arrayListClass, "<init>", "()V"));
-    for (int i = 0; i < roi.size(); i++) {
-        jobject point = env->NewObject(pointClass, env->GetMethodID(pointClass, "<init>", "(II)V"),
-                                       roi[i].x,
-                                       roi[i].y);
-        env->CallBooleanMethod(arrayList,
-                               env->GetMethodID(arrayListClass, "add", "(Ljava/lang/Object;)Z"),
-                               point);
-    }
-    return arrayList;
-}
-
-extern "C"
 std::vector<cv::Point> listPointToVectorPoint(JNIEnv *env, jobject roi) {
     jclass listClass = env->FindClass("java/util/List");
     jclass pointClass = env->FindClass("android/graphics/Point");
@@ -47,13 +27,30 @@ std::vector<cv::Point> listPointToVectorPoint(JNIEnv *env, jobject roi) {
     return vecRoi;
 }
 
-extern "C"
+
+jobject resultsToArrayList(JNIEnv *env, std::vector<cv::Point> roi) {
+    jclass arrayListClass = env->FindClass("java/util/ArrayList");
+    jclass pointClass = env->FindClass("android/graphics/Point");
+
+    jobject arrayList = env->NewObject(arrayListClass,
+                                       env->GetMethodID(arrayListClass, "<init>", "()V"));
+    for (int i = 0; i < roi.size(); i++) {
+        jobject point = env->NewObject(pointClass, env->GetMethodID(pointClass, "<init>", "(II)V"),
+                                       roi[i].x,
+                                       roi[i].y);
+        env->CallBooleanMethod(arrayList,
+                               env->GetMethodID(arrayListClass, "add", "(Ljava/lang/Object;)Z"),
+                               point);
+    }
+    return arrayList;
+}
+
+extern "C" {
 JNIEXPORT jlong JNICALL
 Java_cafe_plastic_documentscanner_vision_PageDetector_Create(JNIEnv *env, jobject instance) {
     return (jlong) (new PageDetector());
 }
 
-extern "C"
 JNIEXPORT jobject JNICALL
 Java_cafe_plastic_documentscanner_vision_PageDetector_GetRoi(JNIEnv *env, jobject instance,
                                                              jbyteArray frame_, jint width,
@@ -65,13 +62,11 @@ Java_cafe_plastic_documentscanner_vision_PageDetector_GetRoi(JNIEnv *env, jobjec
     return resultsToArrayList(env, pageDetector->detect_nv21(vecFrame, width, height, rotation));
 }
 
-extern "C"
 JNIEXPORT void JNICALL
 Java_cafe_plastic_documentscanner_vision_PageDetector_Release(JNIEnv *env, jobject instance) {
     delete getPointer(env, instance);
 }
 
-extern "C"
 JNIEXPORT jfloat JNICALL
 Java_cafe_plastic_documentscanner_vision_PageDetector_GetArea(JNIEnv *env, jobject instance,
                                                               jobject roi) {
@@ -81,11 +76,11 @@ Java_cafe_plastic_documentscanner_vision_PageDetector_GetArea(JNIEnv *env, jobje
 
 }
 
-extern "C"
 JNIEXPORT jfloat JNICALL
 Java_cafe_plastic_documentscanner_vision_PageDetector_GetDistortion(JNIEnv *env, jobject instance,
                                                                     jobject roi) {
     std::vector<cv::Point> vRoi = listPointToVectorPoint(env, roi);
     PageDetector *pageDetector = getPointer(env, instance);
     return pageDetector->distortion(vRoi);
+}
 }
