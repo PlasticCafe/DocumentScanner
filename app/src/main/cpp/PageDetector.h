@@ -9,6 +9,9 @@
 #include <vector>
 #include <opencv2/core/types.hpp>
 #include <opencv2/core/mat.hpp>
+#ifdef __ANDROID_NDK__
+#include <jni.h>
+#endif
 
 class PageDetector {
 public:
@@ -27,6 +30,13 @@ public:
 
     double distortion(std::vector<cv::Point> &points);
 
+    void threshold(cv::Mat &frameInput);
+
+#ifdef __ANDROID_NDK__
+    void bitmapToMat(JNIEnv *env, jobject bitmap, cv::Mat &dst);
+    void matToBitmap(JNIEnv *env, cv::Mat &src, jobject bitmap);
+#endif
+
 private:
     float scale;
 
@@ -40,6 +50,8 @@ private:
     void alignTopEdge(std::vector<cv::Point> &points);
 
     std::vector<cv::Point> findPage(cv::Mat &edges);
+
+    int getMatScale(cv::Mat &frameInput);
 };
 
 #endif //DOCUMENTSCANNER_PAGEDETECTOR_H

@@ -1,6 +1,5 @@
 #include <jni.h>
 #include <string>
-#include "Rectangle.h"
 #include "PageDetector.h"
 
 PageDetector *getPointer(JNIEnv *env, jobject instance) {
@@ -45,6 +44,7 @@ jobject resultsToArrayList(JNIEnv *env, std::vector<cv::Point> roi) {
     return arrayList;
 }
 
+
 extern "C" {
 JNIEXPORT jlong JNICALL
 Java_cafe_plastic_documentscanner_vision_PageDetector_Create(JNIEnv *env, jobject instance) {
@@ -83,4 +83,15 @@ Java_cafe_plastic_documentscanner_vision_PageDetector_GetDistortion(JNIEnv *env,
     PageDetector *pageDetector = getPointer(env, instance);
     return pageDetector->distortion(vRoi);
 }
+
+JNIEXPORT void JNICALL
+Java_cafe_plastic_documentscanner_vision_PageDetector_ThresholdImage(JNIEnv *env, jobject instance,
+                                                                     jobject input) {
+    PageDetector *pageDetector = getPointer(env, instance);
+    cv::Mat tmp;
+    pageDetector->bitmapToMat(env, input, tmp);
+    pageDetector->threshold(tmp);
+    pageDetector->matToBitmap(env, tmp, input);
+}
+
 }

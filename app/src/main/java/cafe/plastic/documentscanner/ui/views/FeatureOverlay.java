@@ -1,7 +1,11 @@
 package cafe.plastic.documentscanner.ui.views;
 
+import android.animation.ValueAnimator;
 import android.content.Context;
+import android.content.res.TypedArray;
 import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.DashPathEffect;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.Point;
@@ -9,44 +13,88 @@ import android.util.AttributeSet;
 import android.view.View;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
+import cafe.plastic.documentscanner.R;
 import cafe.plastic.documentscanner.vision.PageDetector;
 
 public class FeatureOverlay extends View {
     private PageDetector.Region mCurrentRegion;
-    private Paint mPointPaint;
+    private ArrayList<Point> mPriorPoints = new ArrayList<>();
+    private ArrayList<Point> mCurrentPoints = new ArrayList<>();
+    private Paint mStrokePaint;
+    private Paint mFillPaint;
+    private ValueAnimator mCurrentAnimation;
 
     public FeatureOverlay(Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
-        mPointPaint = new Paint();
-        mPointPaint.setColor(0x22ff0000);
-        mPointPaint.setStrokeWidth(5.0f);
+        init(attrs);
+        mPriorPoints = new ArrayList<>(Arrays.asList(new Point(), new Point(), new Point(), new Point()));
+        mCurrentPoints = new ArrayList<>(Arrays.asList(new Point(), new Point(), new Point(), new Point()));
+    }
+
+    private void init(@Nullable AttributeSet attrs) {
+        mFillPaint = new Paint();
+        mStrokePaint = new Paint();
+        mFillPaint.setStyle(Paint.Style.FILL);
+        mFillPaint.setAntiAlias(true);
+        mStrokePaint.setStyle(Paint.Style.STROKE);
+        mStrokePaint.setAntiAlias((true));
+        if (attrs == null) return;
+        TypedArray ta = getContext().obtainStyledAttributes(attrs, R.styleable.FeatureOverlay);
+        mFillPaint.setColor(ta.getColor(R.styleable.FeatureOverlay_fill_color, Color.WHITE));
+        mStrokePaint.setColor(ta.getColor(R.styleable.FeatureOverlay_stroke_color, Color.BLACK));
+        float strokeWidth = ta.getDimensionPixelSize(R.styleable.FeatureOverlay_stroke_width, 1);
+        mStrokePaint.setStrokeWidth(strokeWidth);
+        mStrokePaint.setPathEffect(new DashPathEffect(new float[] {strokeWidth*3, strokeWidth}, 0));
+        ta.recycle();
     }
 
     @Override
     public void draw(Canvas canvas) {
         super.draw(canvas);
-        if (mCurrentRegion != null) {
-            ArrayList<Point> roi = mCurrentRegion.roi;
-            if (roi != null && roi.size() == 4) {
-                Path path = new Path();
-                path.moveTo(roi.get(0).x, roi.get(0).y);
-                for (int i = 1; i <= roi.size(); i++) {
-                    path.lineTo(
-                            roi.get(i % roi.size()).x,
-                            roi.get(i % roi.size()).y);
-                }
-                path.close();
-                canvas.drawPath(path, mPointPaint);
-            }
+        Path path = new Path();
+        path.moveTo(mCurrentPoints.get(0).x, mCurrentPoints.get(0).y);
+        for (int i = 1; i <= mCurrentPoints.size(); i++) {
+            path.lineTo(
+                    mCurrentPoints.get(i % mCurrentPoints.size()).x,
+                    mCurrentPoints.get(i % mCurrentPoints.size()).y);
         }
+        path.close();
+        canvas.drawPath(path, mFillPaint);
+        canvas.drawPath(path, mStrokePaint);
     }
 
+
     public void updateRegion(PageDetector.Region region) {
+        for (int i = 0; i < mCurrentPoints.size(); i++) {
+            mPriorPoints.get(i).set(
+                    mCurrentPoints.get(i).x,
+                    mCurrentPoints.get(i).y);
+        }
         mCurrentRegion = regionToScreen(region);
+        if (mCurrentAnimation != null) mCurrentAnimation.cancel();
+        mCurrentAnimation = ValueAnimator.ofFloat(0f, 1.0f).setDuration(100);
+        mCurrentAnimation.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator valueAnimator) {
+                if (mCurrentRegion != null) {
+                    for (int i = 0; i < mCurrentRegion.roi.size(); i++) {
+                        Point p1 = mPriorPoints.get(i);
+                        Point p2 = mCurrentRegion.roi.get(i);
+                        lerp(p1, p2, mCurrentPoints.get(i), valueAnimator.getAnimatedFraction());
+                    }
+                    invalidate();
+                }
+            }
+        });
+        mCurrentAnimation.start();
+
         invalidate();
+
     }
 
     private PageDetector.Region regionToScreen(PageDetector.Region region) {
@@ -82,5 +130,17 @@ public class FeatureOverlay extends View {
             screenPoints.add(new Point((int) (xd * scale) - excessX, (int) (yd * scale) - excessY));
         }
         return new PageDetector.Region(region.state, screenPoints, region.frameSize, region.rotation);
+    }
+
+    private Point lerp(Point p1, Point p2, Point output, float t) {
+        int x1 = p1.x;
+        int x2 = p2.x;
+        int y1 = p1.y;
+        int y2 = p2.y;
+
+        int xt = (int) ((1.0f - t) * x1 + x2 * t);
+        int yt = (int) ((1.0f - t) * y1 + y2 * t);
+        output.set(xt, yt);
+        return output;
     }
 }

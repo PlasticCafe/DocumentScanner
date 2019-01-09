@@ -6,6 +6,12 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/opencv.hpp>
 
+#ifdef __ANDROID_NDK__
+
+#include <android/bitmap.h>
+
+#endif
+
 PageDetector::PageDetector(float scale) {
     this->scale = scale;
 }
@@ -24,10 +30,14 @@ PageDetector::detect_nv21(std::vector<uint8_t> &frameInput, int32_t width, int32
 std::vector<cv::Point> PageDetector::detect(cv::Mat &frameInput, int32_t rotation) {
     int width = frameInput.cols;
     int height = frameInput.rows;
-    cv::resize(frameInput, frameInput, cv::Size(), scale, scale);
+    if (width * height > 800 * 600) {
+        cv::resize(frameInput, frameInput, cv::Size(), scale, scale);
+    } else {
+        this->scale = 1;
+    }
     //rotate(frameInput, frameInput, rotation);
     edgeDetect(frameInput);
-#ifndef __ANDROID__
+#ifndef __ANDROID_NDK__
     cv::imshow("edge", frameInput);
 #endif
     std::vector<cv::Point> detectedRoi = findPage(frameInput);
@@ -62,14 +72,16 @@ cv::Mat PageDetector::getFrameSection(cv::Mat &frameInput, std::vector<cv::Point
 
 
 cv::Mat PageDetector::edgeDetect(cv::Mat &input) {
-    cv::medianBlur(input, input, 7);
+
+    int frameScale = getMatScale(input);
+    cv::medianBlur(input, input, frameScale / 50 | 1);
     double threshold = cv::threshold(input, input.clone(), 0, 255,
                                      cv::THRESH_BINARY | cv::THRESH_OTSU);
     cv::Canny(input, input, threshold * 0.3, threshold);
     input.rowRange(0, 1).setTo(cv::Scalar(0));
     input.rowRange(input.rows - 2, input.rows - 1).setTo(cv::Scalar(0));
-    cv::dilate(input, input, cv::Mat(), cv::Point(-1, -1), 4);
-    cv::erode(input, input, cv::Mat(), cv::Point(-1, -1), 3);
+    cv::dilate(input, input, cv::Mat(), cv::Point(-1, -1), frameScale / 85);
+    cv::erode(input, input, cv::Mat(), cv::Point(-1, -1), (frameScale / 85) - 1);
     return input;
 }
 
@@ -131,6 +143,10 @@ void PageDetector::alignTopEdge(std::vector<cv::Point> &points) {
     }
 }
 
+int PageDetector::getMatScale(cv::Mat &frameInput) {
+    return cvCeil(cv::sqrt(frameInput.rows * frameInput.cols)) | 1;
+}
+
 std::vector<cv::Point> PageDetector::findPage(cv::Mat &edges) {
     std::vector<std::vector<cv::Point> > contours;
     std::vector<cv::Vec4i> hierarchy;
@@ -160,6 +176,47 @@ std::vector<cv::Point> PageDetector::findPage(cv::Mat &edges) {
     }
     return largestContour;
 }
+
+void PageDetector::threshold(cv::Mat &frameInput) {
+    int frameScale = getMatScale(frameInput);
+    cv::Mat tmp;
+    cv::cvtColor(frameInput, tmp, cv::COLOR_BGR2GRAY);
+    cv::GaussianBlur(tmp, tmp, cv::Size(frameScale / 200 | 1, frameScale / 200 | 1), 0);
+    cv::adaptiveThreshold(tmp, tmp, 255, cv::ADAPTIVE_THRESH_MEAN_C, cv::THRESH_BINARY,
+                          frameScale / 238 | 1, 2);
+    //cv::Mat element = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3), cv::Point(-1, -1));
+    //cv::morphologyEx(tmp, tmp, cv::MORPH_CLOSE, element);
+    cv::cvtColor(tmp, frameInput, cv::COLOR_GRAY2BGR);
+}
+
+
+#ifdef __ANDROID_NDK__
+
+void PageDetector::bitmapToMat(JNIEnv *env, jobject bitmap, cv::Mat &dst) {
+    AndroidBitmapInfo info;
+    void *pixels = 0;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    AndroidBitmap_lockPixels(env, bitmap, &pixels);
+    dst.create(info.height, info.width, CV_8UC4);
+    cv::Mat tmp(info.height, info.width, CV_8UC2, pixels);
+    cv::cvtColor(tmp, dst, cv::COLOR_BGR5652BGR);
+    AndroidBitmap_unlockPixels(env, bitmap);
+    return;
+}
+
+void PageDetector::matToBitmap(JNIEnv *env, cv::Mat &src, jobject bitmap) {
+    AndroidBitmapInfo info;
+    void *pixels = 0;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    AndroidBitmap_lockPixels(env, bitmap, &pixels);
+    cv::Mat tmp(info.height, info.width, CV_8UC2, pixels);
+    cv::cvtColor(src, tmp, cv::COLOR_BGR2BGR565);
+    AndroidBitmap_unlockPixels(env, bitmap);
+    return;
+}
+
+
+#endif
 
 
 

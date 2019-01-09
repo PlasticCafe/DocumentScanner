@@ -52,12 +52,24 @@
             android:id="@+id/featureOverlay"
             android:layout_width="0dp"
             android:layout_height="0dp"
+            app:fill_color="@color/popupMenuBackground"
+            app:stroke_color="@color/popupMenuBackgroundDark"
+            app:stroke_width="5dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintHorizontal_bias="1.0"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintVertical_bias="0.0" />
+
+        <io.fotoapparat.view.FocusView
+            android:id="@+id/focusView"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"></io.fotoapparat.view.FocusView>
 
         <ImageButton
             android:id="@+id/settingsButton"
@@ -100,6 +112,19 @@
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintVertical_bias="1.0" />
 
+        <ImageButton
+            android:id="@+id/invisibleCancelButton"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="8dp"
+            android:background="@null"
+            android:onClickListener="@{handlers::onMenuClosed}"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@+id/popupMenuBackground"
+            app:layout_constraintTop_toTopOf="parent" />
         <ImageButton
             android:id="@+id/backButton"
             android:layout_width="48dp"

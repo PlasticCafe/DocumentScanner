@@ -55,7 +55,6 @@ public class ConfirmationFragment extends Fragment {
         super.onActivityCreated(savedInstanceState);
         mViewModel = ViewModelProviders.of(getActivity()).get(CaptureViewModel.class);
         mViewModel.currentPhoto.observe(this, photo -> {
-            Timber.d("Got photo");
             takenPicture.setImageBitmap(photo);
         });
     }

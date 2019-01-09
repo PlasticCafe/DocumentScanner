@@ -1,15 +1,19 @@
 package cafe.plastic.documentscanner.vision;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Point;
+import android.provider.MediaStore;
+import android.widget.Toast;
 
 import io.fotoapparat.preview.Frame;
 import io.fotoapparat.result.Photo;
 import io.reactivex.Flowable;
+import timber.log.Timber;
 
 public class ObjectTracker extends VisionFrameProcessor<PageDetector.Region> {
     private PageDetector mPageDetector = new PageDetector();
@@ -19,15 +23,16 @@ public class ObjectTracker extends VisionFrameProcessor<PageDetector.Region> {
         return mFrames.map(f -> processNative(f));
     }
 
-    public Bitmap processPhoto(Photo photo, PageDetector.Region roi) {
+    public Bitmap processPhoto(Photo photo, PageDetector.Region roi, Context context) {
         byte[] photoBytes = photo.encodedImage;
-        Bitmap bitmap = BitmapFactory.decodeByteArray(photoBytes, 0, photoBytes.length);
+        BitmapFactory.Options options = new BitmapFactory.Options();
+        options.inPreferredConfig = Bitmap.Config.RGB_565;
+        Bitmap bitmap = BitmapFactory.decodeByteArray(photoBytes, 0, photoBytes.length, options);
         double scale = (double) bitmap.getWidth() / roi.frameSize.getWidth();
         Matrix matrix = new Matrix();
-        bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, false);
         roi.scale(scale);
         Point dims = roi.getDimensions();
-        Bitmap processed = Bitmap.createBitmap(dims.x, dims.y, Bitmap.Config.ARGB_8888);
+        Bitmap processed = Bitmap.createBitmap(dims.x, dims.y, Bitmap.Config.RGB_565);
         Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
         Canvas c = new Canvas(processed);
         Matrix warp = new Matrix();
@@ -40,6 +45,12 @@ public class ObjectTracker extends VisionFrameProcessor<PageDetector.Region> {
         };
         warp.setPolyToPoly(src, 0, dst, 0, 4);
         c.drawBitmap(bitmap, warp, p);
+        mPageDetector.thresholdImage(processed);
+        matrix.postRotate(-1*roi.rotation);
+        processed = Bitmap.createBitmap(processed, 0, 0, processed.getWidth(), processed.getHeight(), matrix, false);
+        String filename = "DocumentScanner" + System.currentTimeMillis() + ".jpg";
+        MediaStore.Images.Media.insertImage(context.getContentResolver(), processed, filename, "Image Scan");
+        Timber.d("Image saved");
         return processed;
     }
 

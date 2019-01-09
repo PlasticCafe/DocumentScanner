@@ -18,10 +18,12 @@ import androidx.fragment.app.Fragment;
 import androidx.transition.ChangeBounds;
 
 import android.util.Log;
+import android.util.Pair;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.AnticipateOvershootInterpolator;
+import android.widget.Toast;
 
 import androidx.navigation.fragment.NavHostFragment;
 import androidx.transition.TransitionManager;
@@ -34,12 +36,14 @@ import io.fotoapparat.configuration.CameraConfiguration;
 import io.fotoapparat.parameter.ScaleType;
 import io.fotoapparat.result.Photo;
 import io.fotoapparat.selector.FlashSelectorsKt;
+import io.fotoapparat.selector.PreviewFpsRangeSelectorsKt;
 import io.fotoapparat.selector.ResolutionSelectorsKt;
 import io.fotoapparat.view.CameraView;
 import io.reactivex.Observable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.processors.PublishProcessor;
+import io.reactivex.schedulers.Schedulers;
 import timber.log.Timber;
 
 public class CaptureFragment extends Fragment {
@@ -74,19 +78,15 @@ public class CaptureFragment extends Fragment {
         mViewModel.outlineState.observe(this, o -> configureCamera());
         mCaptureFragmentBinding.setViewmodel(mViewModel);
         mCaptureFragmentBinding.setLifecycleOwner(this);
-        requestPermissions(new String[]{Manifest.permission.CAMERA}, 0);
-        mFotoapparat = Fotoapparat.with(getActivity())
-                .into((CameraView) getView().findViewById(R.id.camera_view))
-                .previewScaleType(ScaleType.CenterCrop)
-                .previewResolution(ResolutionSelectorsKt.highestResolution())
-                .frameProcessor(mObjectTracker)
-                .build();
+        requestPermissions(new String[]{Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE}, 0);
+        initializeCamera();
     }
 
     @Override
     public void onResume() {
         super.onResume();
         Timber.d("onResume");
+        initializeCamera();
         mFotoapparat.start();
         configureObservers();
         configureCamera();
@@ -111,35 +111,54 @@ public class CaptureFragment extends Fragment {
         mCompositeDisposable.add(mObjectTracker.processedOutput()
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(region -> {
-                    mCaptureFragmentBinding.featureOverlay.updateRegion(region);
+                    if(region.state != PageDetector.State.NONE) {
+                        mCaptureFragmentBinding.featureOverlay.updateRegion(region);
+                    }
 
+                    if (lockCounter == -1) return;
                     if (region.state != PageDetector.State.LOCKED) {
                         lockCounter = 0;
                     } else {
                         lockCounter++;
                     }
 
-                    if (lockCounter > 20) {
+                    if (lockCounter > 40) {
+                        mFotoapparat.focus();
                         capture();
-                        lockCounter = 0;
+                        lockCounter = -1;
                     }
                 }));
 
         mCompositeDisposable
-                .add(Observable
-                        .combineLatest(mPhotoObserver.toObservable(),
-                                mObjectTracker.processedOutput().toObservable()
+                .add(mPhotoObserver.toObservable()
+                        .withLatestFrom(mObjectTracker.processedOutput().toObservable()
                                         .filter(r -> r.state == PageDetector.State.LOCKED),
-                                (p, r) -> mObjectTracker.processPhoto(p, r))
+                                Pair::new)
+                        .observeOn(Schedulers.computation())
+                        .map(p -> {
+                            mFotoapparat.stop();
+                            return mObjectTracker.processPhoto(p.first, p.second, getContext());
+                        })
                         .observeOn(AndroidSchedulers.mainThread())
                         .subscribe(b -> {
+                            Toast.makeText(getContext(), "Image saved.", Toast.LENGTH_SHORT).show();
                             mViewModel.currentPhoto.setValue(b);
+                            lockCounter = 0;
                             NavHostFragment.findNavController(CaptureFragment.this)
                                     .navigate(R.id.action_captureFragment_to_confirmFragment);
                             toggleCaptureLoading();
                         }));
     }
 
+    private void initializeCamera() {
+        mFotoapparat = Fotoapparat.with(getActivity())
+                .into(mCaptureFragmentBinding.cameraView
+                )
+                .focusView(mCaptureFragmentBinding.focusView)
+                .previewScaleType(ScaleType.CenterCrop)
+                .frameProcessor(mObjectTracker)
+                .build();
+    }
     private void configureCamera() {
         CameraConfiguration.Builder builder = new CameraConfiguration.Builder();
         switch (mViewModel.flashState.getValue()) {
@@ -163,7 +182,6 @@ public class CaptureFragment extends Fragment {
                 break;
             default:
         }
-        builder.previewResolution(ResolutionSelectorsKt.highestResolution());
         mFotoapparat.updateConfiguration(builder.build());
     }
 

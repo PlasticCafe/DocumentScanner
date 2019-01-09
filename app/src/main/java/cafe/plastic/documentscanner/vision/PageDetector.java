@@ -22,6 +22,7 @@ public class PageDetector {
     private native ArrayList<Point> GetRoi(byte[] frame, int width, int height, int rotation);
     private native float GetArea(List<Point> roi);
     private native float GetDistortion(List<Point> roi);
+    private native void ThresholdImage(Bitmap input);
     public enum State {
         LOCKED,
         PERSPECTIVE,
@@ -107,6 +108,10 @@ public class PageDetector {
         if(!released)
             Release();
         released = true;
+    }
+
+    public void thresholdImage(Bitmap input) {
+        ThresholdImage(input);
     }
 
     private boolean distorted(List<Point> roi) {
