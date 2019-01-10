@@ -10,12 +10,10 @@ cmake_minimum_required(VERSION 3.4.1)
 # or SHARED, and provides the relative paths to its source code.
 # You can define multiple libraries, and CMake builds them for you.
 # Gradle automatically packages shared libraries with your APK.
-set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE BOTH)
-set(OPEN_CV_INCLUDE_DIR G:/Programming/libs/opencv-android/sdk/native/jni/include/)
-
-include_directories(${OPEN_CV_INCLUDE_DIR})
+set(OpenCV_DIR ${OPENCV_SDK}/native/jni)
+include_directories(${OPENCV_SDK}/native/jni/include)
 include_directories(src/main/cpp/include/)
-
+find_package(OpenCV REQUIRED java)
 file(GLOB sources_page_detector
         "src/main/cpp/*.cpp"
         "src/main/cpp/*.h"
@@ -42,7 +40,7 @@ add_library( # Sets the name of the library.
 target_link_libraries( # Specifies the target library.
         page-detect-lib
         -ljnigraphics
-        "${CMAKE_SOURCE_DIR}/src/main/jniLibs/${ANDROID_ABI}/libopencv_java3.so"
+        ${OpenCV_LIBS}
         # Links the target library to the log library
         # included in the NDK.
         android
