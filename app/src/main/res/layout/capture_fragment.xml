@@ -69,7 +69,7 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"></io.fotoapparat.view.FocusView>
+            app:layout_constraintTop_toTopOf="parent" />
 
         <ImageButton
             android:id="@+id/settingsButton"
@@ -83,7 +83,8 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="@+id/captureButton"
             app:layout_constraintVertical_bias="1.0"
-            app:srcCompat="@drawable/baseline_settings_white_48" />
+            app:srcCompat="@drawable/ic_settings"
+            android:contentDescription="@string/settings_desc" />
 
         <ImageButton
             android:id="@+id/documentsButton"
@@ -96,19 +97,20 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="@+id/captureButton"
             app:layout_constraintVertical_bias="1.0"
-            app:srcCompat="@drawable/baseline_description_white_48" />
+            app:srcCompat="@drawable/ic_documents"
+            android:contentDescription="@string/docs_library_desc" />
 
         <View
             android:id="@+id/popupMenuBackground"
             android:layout_width="96dp"
             android:layout_height="0dp"
-            android:layout_marginEnd="8dp"
             android:background="@color/popupMenuBackground"
             android:clickable="true"
             android:focusable="true"
-            android:paddingRight="0dp"
+            android:paddingEnd="0dp"
+            android:paddingStart="0dp"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintVertical_bias="1.0" />
 
@@ -124,7 +126,8 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toEndOf="@+id/popupMenuBackground"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintTop_toTopOf="parent"
+            android:contentDescription="@string/close_overlay_desc" />
         <ImageButton
             android:id="@+id/backButton"
             android:layout_width="48dp"
@@ -136,7 +139,8 @@
             app:layout_constraintEnd_toEndOf="@+id/popupMenuBackground"
             app:layout_constraintStart_toStartOf="@id/popupMenuBackground"
             app:layout_constraintTop_toTopOf="parent"
-            app:srcCompat="@drawable/baseline_arrow_back_white_48" />
+            app:srcCompat="@drawable/ic_arrow_back"
+            android:contentDescription="@string/back_button_desc"/>
 
         <ImageButton
             android:id="@+id/flashToggle"
@@ -148,13 +152,13 @@
             android:padding="5dp"
             android:scaleType="fitCenter"
             app:flashState="@{viewmodel.flashState}"
-            app:flashAuto="@{@drawable/baseline_flash_auto_white_48}"
-            app:flashOff="@{@drawable/baseline_flash_off_white_48}"
-            app:flashOn="@{@drawable/baseline_flash_on_white_48}"
+            app:flashOff="@{@drawable/ic_flash_off}"
+            app:flashOn="@{@drawable/ic_flash_on}"
             app:layout_constraintEnd_toEndOf="@+id/popupMenuBackground"
             app:layout_constraintStart_toStartOf="@id/popupMenuBackground"
             app:layout_constraintTop_toBottomOf="@+id/backButton"
-            tools:src="@drawable/baseline_flash_on_white_48" />
+            tools:src="@drawable/ic_flash_on"
+            android:contentDescription="@string/flash_button_desc" />
 
         <ImageButton
             android:id="@+id/outlineToggle"
@@ -165,7 +169,8 @@
             app:layout_constraintEnd_toEndOf="@+id/popupMenuBackground"
             app:layout_constraintStart_toStartOf="@id/popupMenuBackground"
             app:layout_constraintTop_toBottomOf="@+id/flashToggle"
-            app:srcCompat="@drawable/baseline_outline_white_48" />
+            app:srcCompat="@drawable/ic_outline_on"
+            android:contentDescription="@string/toggle_outline_desc" />
 
         <ImageView
             android:id="@+id/about"
@@ -177,7 +182,8 @@
             app:layout_constraintBottom_toBottomOf="@id/popupMenuBackground"
             app:layout_constraintEnd_toEndOf="@+id/popupMenuBackground"
             app:layout_constraintStart_toStartOf="@+id/popupMenuBackground"
-            app:srcCompat="@drawable/baseline_info_white_48" />
+            app:srcCompat="@drawable/ic_info"
+            android:contentDescription="@string/about_desc" />
 
         <View
             android:id="@+id/captureProgressBackground"
@@ -213,6 +219,7 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:srcCompat="@drawable/baseline_camera_alt_white" />
+            app:srcCompat="@drawable/ic_camera"
+            android:contentDescription="@string/camera_button_desc" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 </layout>

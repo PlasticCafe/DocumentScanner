@@ -13,7 +13,7 @@ cmake_minimum_required(VERSION 3.4.1)
 set(OpenCV_DIR ${OPENCV_SDK}/native/jni)
 include_directories(${OPENCV_SDK}/native/jni/include)
 include_directories(src/main/cpp/include/)
-find_package(OpenCV REQUIRED java)
+find_package(OpenCV REQUIRED)
 file(GLOB sources_page_detector
         "src/main/cpp/*.cpp"
         "src/main/cpp/*.h"
@@ -36,7 +36,6 @@ add_library( # Sets the name of the library.
 # Specifies libraries CMake should link to your target library. You
 # can link multiple libraries, such as libraries you define in this
 # build script, prebuilt third-party libraries, or system libraries.
-
 target_link_libraries( # Specifies the target library.
         page-detect-lib
         -ljnigraphics

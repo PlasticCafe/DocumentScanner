@@ -2,5 +2,12 @@
     <string name="app_name">Document Scanner</string>
 
     <!-- TODO: Remove or change this placeholder text -->
-    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="toggle_outline_desc">Toggle tracking outline</string>
+    <string name="flash_button_desc">Toggle flash</string>
+    <string name="back_button_desc">Close menu</string>
+    <string name="close_overlay_desc">Close menu</string>
+    <string name="docs_library_desc">Documents library</string>
+    <string name="settings_desc">Settings</string>
+    <string name="about_desc">About</string>
+    <string name="camera_button_desc">Take picture</string>
 </resources>
