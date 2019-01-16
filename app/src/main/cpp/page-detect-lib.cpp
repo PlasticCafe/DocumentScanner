@@ -54,12 +54,12 @@ Java_cafe_plastic_documentscanner_vision_PageDetector_Create(JNIEnv *env, jobjec
 JNIEXPORT jobject JNICALL
 Java_cafe_plastic_documentscanner_vision_PageDetector_GetRoi(JNIEnv *env, jobject instance,
                                                              jbyteArray frame_, jint width,
-                                                             jint height, jint rotation) {
+                                                             jint height) {
     jbyte *frame = env->GetByteArrayElements(frame_, NULL);
     jsize size = env->GetArrayLength(frame_);
     std::vector<uint8_t> vecFrame((uint8_t *) frame, (uint8_t *) (frame + size));
     PageDetector *pageDetector = getPointer(env, instance);
-    return resultsToArrayList(env, pageDetector->detect_nv21(vecFrame, width, height, rotation));
+    return resultsToArrayList(env, pageDetector->detect_nv21(vecFrame, width, height));
 }
 
 JNIEXPORT void JNICALL
@@ -81,7 +81,7 @@ Java_cafe_plastic_documentscanner_vision_PageDetector_GetDistortion(JNIEnv *env,
                                                                     jobject roi) {
     std::vector<cv::Point> vRoi = listPointToVectorPoint(env, roi);
     PageDetector *pageDetector = getPointer(env, instance);
-    return pageDetector->distortion(vRoi);
+    return static_cast<jfloat>(pageDetector->distortion(vRoi));
 }
 
 JNIEXPORT void JNICALL

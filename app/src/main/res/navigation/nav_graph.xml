@@ -13,5 +13,5 @@
         android:id="@+id/confirmFragment"
         android:name="cafe.plastic.documentscanner.ui.fragments.ConfirmationFragment"
         android:label="confirm_fragment"
-        tools:layout="@layout/fragment_confirmation"></fragment>
+        tools:layout="@layout/fragment_confirmation" />
 </navigation>

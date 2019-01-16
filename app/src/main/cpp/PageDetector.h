@@ -18,9 +18,9 @@ public:
     PageDetector(float scale = 0.25);
 
     std::vector<cv::Point>
-    detect_nv21(std::vector<uint8_t> &frameInput, int32_t width, int32_t height, int32_t rotation);
+    detect_nv21(std::vector<uint8_t> &frameInput, int32_t width, int32_t height);
 
-    std::vector<cv::Point> detect(cv::Mat &frameInput, int32_t rotation);
+    std::vector<cv::Point> detect(cv::Mat &frameInput);
 
     cv::Mat getMat_nv21(std::vector<uint8_t> &frameInput, int32_t width, int32_t height);
 

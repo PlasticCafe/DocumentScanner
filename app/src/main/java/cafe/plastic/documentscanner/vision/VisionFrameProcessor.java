@@ -1,8 +1,5 @@
 package cafe.plastic.documentscanner.vision;
 
-import android.graphics.Bitmap;
-import android.graphics.Point;
-
 import org.jetbrains.annotations.NotNull;
 import io.fotoapparat.preview.Frame;
 import io.fotoapparat.preview.FrameProcessor;
@@ -11,13 +8,12 @@ import io.reactivex.processors.PublishProcessor;
 import io.reactivex.schedulers.Schedulers;
 
 
-public abstract class VisionFrameProcessor<T> implements FrameProcessor {
-    protected PublishProcessor<Frame> mInput;
-    protected Flowable<Frame> mFrames;
-    private Point mCurrentResolution;
+abstract class VisionFrameProcessor<T> implements FrameProcessor {
+    private final PublishProcessor<Frame> mInput;
+    final Flowable<Frame> mFrames;
 
-    public VisionFrameProcessor() {
-        mInput = PublishProcessor.<Frame>create();
+    VisionFrameProcessor() {
+        mInput = PublishProcessor.create();
         mFrames = mInput
                 .onBackpressureLatest()
                 .observeOn(Schedulers.computation());
@@ -28,10 +24,5 @@ public abstract class VisionFrameProcessor<T> implements FrameProcessor {
         mInput.onNext(frame);
     }
 
-    public Flowable<Frame> getFrames() {
-        return mFrames;
-    }
-
-    public abstract Flowable<T> processedOutput();
 
 }

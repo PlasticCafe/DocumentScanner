@@ -17,17 +17,15 @@ PageDetector::PageDetector(float scale) {
 }
 
 std::vector<cv::Point>
-PageDetector::detect_nv21(std::vector<uint8_t> &frameInput, int32_t width, int32_t height,
-                          int32_t rotation) {
-    int size = frameInput.size();
+PageDetector::detect_nv21(std::vector<uint8_t> &frameInput, int32_t width, int32_t height) {
     assert(("The input frame is too small", width > 4 || height > 4));
     assert(("Input frame is not in NV21 format", frameInput.size() ==
                                                  (height + height / 2) * width));
     cv::Mat frame = getMat_nv21(frameInput, width, height);
-    return this->detect(frame, rotation);
+    return this->detect(frame);
 }
 
-std::vector<cv::Point> PageDetector::detect(cv::Mat &frameInput, int32_t rotation) {
+std::vector<cv::Point> PageDetector::detect(cv::Mat &frameInput) {
     int width = frameInput.cols;
     int height = frameInput.rows;
     if (width * height > 800 * 600) {

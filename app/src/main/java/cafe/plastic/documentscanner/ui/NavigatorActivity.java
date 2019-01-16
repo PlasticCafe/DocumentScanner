@@ -3,8 +3,6 @@ package cafe.plastic.documentscanner.ui;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.os.Bundle;
-import android.view.View;
-import android.view.WindowManager;
 
 import androidx.navigation.Navigation;
 import cafe.plastic.documentscanner.R;
@@ -15,7 +13,9 @@ public class NavigatorActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_navigator);
-        getSupportActionBar().hide();
+        if(getSupportActionBar() != null) {
+            getSupportActionBar().hide();
+        }
     }
 
     @Override

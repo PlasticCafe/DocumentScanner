@@ -8,7 +8,6 @@ import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Point;
 import android.provider.MediaStore;
-import android.widget.Toast;
 
 import io.fotoapparat.preview.Frame;
 import io.fotoapparat.result.Photo;
@@ -16,11 +15,10 @@ import io.reactivex.Flowable;
 import timber.log.Timber;
 
 public class ObjectTracker extends VisionFrameProcessor<PageDetector.Region> {
-    private PageDetector mPageDetector = new PageDetector();
+    private final PageDetector mPageDetector = new PageDetector();
 
-    @Override
     public Flowable<PageDetector.Region> processedOutput() {
-        return mFrames.map(f -> processNative(f));
+        return mFrames.map(this::processNative);
     }
 
     public Bitmap processPhoto(Photo photo, PageDetector.Region roi, Context context) {

@@ -2,24 +2,20 @@ package cafe.plastic.documentscanner.vision;
 
 import android.graphics.Bitmap;
 import android.graphics.Point;
-import android.graphics.Rect;
 import android.util.Size;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import io.fotoapparat.preview.Frame;
-import io.fotoapparat.result.Photo;
-
 public class PageDetector {
+    private boolean mReleased = false;
+    @SuppressWarnings({"unused", "FieldCanBeLocal"})
     private long mHandle;
-    private boolean released = false;
-
 
 
     private native long Create();
     private native void Release();
-    private native ArrayList<Point> GetRoi(byte[] frame, int width, int height, int rotation);
+    private native ArrayList<Point> GetRoi(byte[] frame, int width, int height);
     private native float GetArea(List<Point> roi);
     private native float GetDistortion(List<Point> roi);
     private native void ThresholdImage(Bitmap input);
@@ -31,10 +27,10 @@ public class PageDetector {
     }
 
     public static class Region {
-        public State state;
-        public ArrayList<Point> roi;
-        public Size frameSize;
-        public int rotation;
+        public final State state;
+        public final ArrayList<Point> roi;
+        public final Size frameSize;
+        public final int rotation;
         public Region(State state, ArrayList<Point> roi, Size frameSize, int rotation) {
             this.state = state;
             this.roi = roi;
@@ -54,7 +50,7 @@ public class PageDetector {
 
         }
 
-        public float[] toFloatArray() {
+        float[] toFloatArray() {
             float[] points = new float[roi.size()*2];
             for(int i = 0; i < roi.size(); i++) {
                 points[i*2] = roi.get(i).x;
@@ -63,7 +59,7 @@ public class PageDetector {
             return points;
         }
 
-        public void scale(double scale) {
+        void scale(double scale) {
             for(int i = 0; i < roi.size(); i++) {
                 roi.get(i).x *= scale;
                 roi.get(i).y *= scale;
@@ -78,19 +74,14 @@ public class PageDetector {
            return Math.sqrt(p1.x*p1.x + p1.y*p1.y);
         }
     }
-    public PageDetector() {
+    PageDetector() {
         mHandle = Create();
     }
 
-    public void initialize(Frame frame, Rect trackingRegion) {
-        if(released)
-            return;
-    }
-
-    public Region detect(byte[] frame, int width, int height, int rotation) {
-        if(released)
-            throw new IllegalStateException("Detector has been released");
-        ArrayList<Point> roi = GetRoi(frame, width, height, rotation);
+    Region detect(byte[] frame, int width, int height, int rotation) {
+        if(mReleased)
+            throw new IllegalStateException("Detector has been mReleased");
+        ArrayList<Point> roi = GetRoi(frame, width, height);
         State state;
         if(roi.size() != 4) {
             state = State.NONE;
@@ -104,23 +95,19 @@ public class PageDetector {
         return new Region(state, roi, new Size(width, height), rotation);
     }
 
-    public void release() {
-        if(!released)
+    void release() {
+        if(!mReleased)
             Release();
-        released = true;
+        mReleased = true;
     }
 
-    public void thresholdImage(Bitmap input) {
+    void thresholdImage(Bitmap input) {
         ThresholdImage(input);
     }
 
     private boolean distorted(List<Point> roi) {
         float distortion = GetDistortion(roi);
-        if(distortion > 25) {
-            return true;
-        } else {
-            return false;
-        }
+        return distortion > 25;
     }
 
     private float frameArea(int width, int height, List<Point> roi) {

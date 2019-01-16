@@ -3,7 +3,6 @@ package cafe.plastic.documentscanner.ui.fragments;
 import android.app.Application;
 import android.graphics.Bitmap;
 
-import androidx.databinding.ObservableField;
 import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LifecycleObserver;
 import androidx.lifecycle.MutableLiveData;
@@ -18,11 +17,6 @@ public class CaptureViewModel extends AndroidViewModel implements LifecycleObser
         super(application);
         flashState.setValue(CameraState.Flash.OFF);
         outlineState.setValue(CameraState.Outline.ON);
-    }
-
-    @Override
-    protected void onCleared() {
-        super.onCleared();
     }
 
 }

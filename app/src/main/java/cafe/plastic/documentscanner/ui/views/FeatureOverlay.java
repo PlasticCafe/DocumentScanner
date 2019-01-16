@@ -14,17 +14,15 @@ import android.view.View;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
 import androidx.annotation.Nullable;
-import androidx.core.content.ContextCompat;
 import cafe.plastic.documentscanner.R;
 import cafe.plastic.documentscanner.vision.PageDetector;
 
 public class FeatureOverlay extends View {
     private PageDetector.Region mCurrentRegion;
-    private ArrayList<Point> mPriorPoints = new ArrayList<>();
-    private ArrayList<Point> mCurrentPoints = new ArrayList<>();
+    private final ArrayList<Point> mPriorPoints;
+    private final ArrayList<Point> mCurrentPoints;
     private Paint mStrokePaint;
     private Paint mFillPaint;
     private ValueAnimator mCurrentAnimation;
@@ -78,17 +76,14 @@ public class FeatureOverlay extends View {
         mCurrentRegion = regionToScreen(region);
         if (mCurrentAnimation != null) mCurrentAnimation.cancel();
         mCurrentAnimation = ValueAnimator.ofFloat(0f, 1.0f).setDuration(100);
-        mCurrentAnimation.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-            @Override
-            public void onAnimationUpdate(ValueAnimator valueAnimator) {
-                if (mCurrentRegion != null) {
-                    for (int i = 0; i < mCurrentRegion.roi.size(); i++) {
-                        Point p1 = mPriorPoints.get(i);
-                        Point p2 = mCurrentRegion.roi.get(i);
-                        lerp(p1, p2, mCurrentPoints.get(i), valueAnimator.getAnimatedFraction());
-                    }
-                    invalidate();
+        mCurrentAnimation.addUpdateListener(valueAnimator -> {
+            if (mCurrentRegion != null) {
+                for (int i = 0; i < mCurrentRegion.roi.size(); i++) {
+                    Point p1 = mPriorPoints.get(i);
+                    Point p2 = mCurrentRegion.roi.get(i);
+                    lerp(p1, p2, mCurrentPoints.get(i), valueAnimator.getAnimatedFraction());
                 }
+                invalidate();
             }
         });
         mCurrentAnimation.start();
@@ -132,7 +127,7 @@ public class FeatureOverlay extends View {
         return new PageDetector.Region(region.state, screenPoints, region.frameSize, region.rotation);
     }
 
-    private Point lerp(Point p1, Point p2, Point output, float t) {
+    private void lerp(Point p1, Point p2, Point output, float t) {
         int x1 = p1.x;
         int x2 = p2.x;
         int y1 = p1.y;
@@ -141,6 +136,5 @@ public class FeatureOverlay extends View {
         int xt = (int) ((1.0f - t) * x1 + x2 * t);
         int yt = (int) ((1.0f - t) * y1 + y2 * t);
         output.set(xt, yt);
-        return output;
     }
 }
