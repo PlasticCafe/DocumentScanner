@@ -82,6 +82,7 @@ public class CaptureFragment extends Fragment {
         mFotoapparat.start();
         configureObservers();
         configureCamera();
+        initializeUI();
     }
 
     @Override
@@ -188,29 +189,29 @@ public class CaptureFragment extends Fragment {
         });
     }
 
-    private void animate(int targetLayout, TimeInterpolator interpolator) {
+    private void animate(int targetLayout, int time, TimeInterpolator interpolator) {
         ConstraintSet target = new ConstraintSet();
         ChangeBounds transition = new ChangeBounds();
         target.clone(getActivity(), targetLayout);
         transition.setInterpolator(interpolator);
-        transition.setDuration(100);
+        transition.setDuration(time);
         TransitionManager.beginDelayedTransition(mCaptureFragmentBinding.constraintLayout, transition);
         target.applyTo(mCaptureFragmentBinding.constraintLayout);
     }
 
-    private void toggleMenu(boolean state) {
+    private void toggleMenu(boolean state, int time) {
         if (state)
-            animate(R.layout.capture_fragment_menu_open, new LinearInterpolator());
+            animate(R.layout.capture_fragment_menu_open, time, new LinearInterpolator());
         else
-            animate(R.layout.capture_fragment_menu_closed, new LinearInterpolator());
+            animate(R.layout.capture_fragment_menu_closed, time, new LinearInterpolator());
         mMenuOpen = !mMenuOpen;
     }
 
-    private void toggleButtons(boolean state) {
+    private void toggleButtons(boolean state, int time) {
         if (state)
-            animate(R.layout.capture_fragment_buttons_shown, new LinearInterpolator());
+            animate(R.layout.capture_fragment_buttons_shown, time, new LinearInterpolator());
         else
-            animate(R.layout.capture_fragment_buttons_hidden, new LinearInterpolator());
+            animate(R.layout.capture_fragment_buttons_hidden, time, new LinearInterpolator());
         mButtonsHidden = !mButtonsHidden;
     }
 
@@ -218,16 +219,22 @@ public class CaptureFragment extends Fragment {
         if (mCaptureLoading) {
             Timber.d("Hiding loading UI");
             mCaptureFragmentBinding.loadinggroup.setVisibility(View.GONE);
-            toggleButtons(true);
+            toggleButtons(true, 100);
             mCaptureLoading = false;
         } else {
             Timber.d("Throwing up loading UI");
             mCaptureFragmentBinding.loadinggroup.setVisibility(View.VISIBLE);
-            toggleButtons(false);
-            toggleMenu(false);
+            toggleButtons(false, 100);
+            toggleMenu(false, 100);
             mCaptureLoading = true;
         }
     }
+
+    private void initializeUI() {
+        toggleButtons(true, 0);
+        toggleMenu(false, 0);
+    }
+
 
     public class Handlers {
 
@@ -240,8 +247,6 @@ public class CaptureFragment extends Fragment {
             if (flash == CameraState.Flash.OFF) {
                 flash = CameraState.Flash.ON;
             } else if (flash == CameraState.Flash.ON) {
-                flash = CameraState.Flash.AUTO;
-            } else {
                 flash = CameraState.Flash.OFF;
             }
             mViewModel.flashState.setValue(flash);
@@ -258,13 +263,13 @@ public class CaptureFragment extends Fragment {
         }
 
         public void onMenuOpened(View view) {
-            toggleMenu(true);
-            toggleButtons(false);
+            toggleMenu(true, 100);
+            toggleButtons(false, 100);
         }
 
         public void onMenuClosed(View view) {
-            toggleMenu(false);
-            toggleButtons(true);
+            toggleMenu(false, 100);
+            toggleButtons(true, 100);
         }
     }
 }
