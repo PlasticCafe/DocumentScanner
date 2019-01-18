@@ -166,10 +166,16 @@
             android:layout_height="48dp"
             android:layout_marginTop="48dp"
             android:background="@drawable/circular_background_selector"
+            android:onClickListener="@{handlers::onOutlineButtonClicked}"
+            android:padding="5dp"
+            android:scaleType="fitCenter"
+            app:outlineState="@{viewmodel.outlineState}"
+            app:outlineOff="@{@drawable/ic_outline_off}"
+            app:outlineOn="@{@drawable/ic_outline_on}"
             app:layout_constraintEnd_toEndOf="@+id/popupMenuBackground"
             app:layout_constraintStart_toStartOf="@id/popupMenuBackground"
             app:layout_constraintTop_toBottomOf="@+id/flashToggle"
-            app:srcCompat="@drawable/ic_outline_on"
+            tools:src="@drawable/ic_outline_on"
             android:contentDescription="@string/toggle_outline_desc" />
 
         <ImageView

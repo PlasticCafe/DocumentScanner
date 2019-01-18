@@ -9,6 +9,7 @@ import android.graphics.DashPathEffect;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.Point;
+import android.graphics.Typeface;
 import android.util.AttributeSet;
 import android.view.View;
 
@@ -21,10 +22,13 @@ import cafe.plastic.documentscanner.vision.PageDetector;
 
 public class FeatureOverlay extends View {
     private PageDetector.Region mCurrentRegion;
+    private final ArrayList<Point> mDefaultPoints;
     private final ArrayList<Point> mPriorPoints;
     private final ArrayList<Point> mCurrentPoints;
+    private int mDefaultSquareWidth;
     private Paint mStrokePaint;
     private Paint mFillPaint;
+    private Paint mTextPaint;
     private ValueAnimator mCurrentAnimation;
 
     public FeatureOverlay(Context context, @Nullable AttributeSet attrs) {
@@ -32,11 +36,13 @@ public class FeatureOverlay extends View {
         init(attrs);
         mPriorPoints = new ArrayList<>(Arrays.asList(new Point(), new Point(), new Point(), new Point()));
         mCurrentPoints = new ArrayList<>(Arrays.asList(new Point(), new Point(), new Point(), new Point()));
+        mDefaultPoints = new ArrayList<>(Arrays.asList(new Point(), new Point(), new Point(), new Point()));
     }
 
     private void init(@Nullable AttributeSet attrs) {
         mFillPaint = new Paint();
         mStrokePaint = new Paint();
+        mTextPaint = new Paint();
         mFillPaint.setStyle(Paint.Style.FILL);
         mFillPaint.setAntiAlias(true);
         mStrokePaint.setStyle(Paint.Style.STROKE);
@@ -48,6 +54,9 @@ public class FeatureOverlay extends View {
         float strokeWidth = ta.getDimensionPixelSize(R.styleable.FeatureOverlay_stroke_width, 1);
         mStrokePaint.setStrokeWidth(strokeWidth);
         mStrokePaint.setPathEffect(new DashPathEffect(new float[] {strokeWidth*3, strokeWidth}, 0));
+
+        mTextPaint.setTypeface(Typeface.create("Arial", Typeface.NORMAL));
+        mTextPaint.setTextSize(200);
         ta.recycle();
     }
 
@@ -55,17 +64,40 @@ public class FeatureOverlay extends View {
     public void draw(Canvas canvas) {
         super.draw(canvas);
         Path path = new Path();
+        int centerx = 0;
+        int centery = 0;
         path.moveTo(mCurrentPoints.get(0).x, mCurrentPoints.get(0).y);
-        for (int i = 1; i <= mCurrentPoints.size(); i++) {
+        for (int i = 1; i <= 4; i++) {
+            centerx += mCurrentPoints.get(i % 4).x;
+            centery += mCurrentPoints.get(i % 4).y;
             path.lineTo(
-                    mCurrentPoints.get(i % mCurrentPoints.size()).x,
-                    mCurrentPoints.get(i % mCurrentPoints.size()).y);
+                    mCurrentPoints.get(i % 4).x,
+                    mCurrentPoints.get(i % 4).y);
         }
         path.close();
+        centerx /= 4;
+        centery /= 4;
         canvas.drawPath(path, mFillPaint);
         canvas.drawPath(path, mStrokePaint);
+        mTextPaint.setTextSize(mDefaultSquareWidth/4);
+        canvas.drawText("TestText", centerx, centery, mTextPaint);
     }
 
+    @Override
+    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+        int width = View.MeasureSpec.getSize(widthMeasureSpec);
+        int height = View.MeasureSpec.getSize(heightMeasureSpec);
+        mDefaultSquareWidth = (int)Math.min(width * 0.20f, height * 0.20f);
+        int leftX = width/2 - mDefaultSquareWidth;
+        int rightX = leftX + mDefaultSquareWidth*2;
+        int topY = height/2 - mDefaultSquareWidth;
+        int bottomY = topY + mDefaultSquareWidth*2;
+        mDefaultPoints.get(0).set(rightX, topY);
+        mDefaultPoints.get(1).set(rightX, bottomY);
+        mDefaultPoints.get(2).set(leftX, bottomY);
+        mDefaultPoints.get(3).set(leftX, topY);
+    }
 
     public void updateRegion(PageDetector.Region region) {
         for (int i = 0; i < mCurrentPoints.size(); i++) {
@@ -77,13 +109,19 @@ public class FeatureOverlay extends View {
         if (mCurrentAnimation != null) mCurrentAnimation.cancel();
         mCurrentAnimation = ValueAnimator.ofFloat(0f, 1.0f).setDuration(100);
         mCurrentAnimation.addUpdateListener(valueAnimator -> {
-            if (mCurrentRegion != null) {
+            if (mCurrentRegion != null && mCurrentRegion.state != PageDetector.State.NONE) {
                 for (int i = 0; i < mCurrentRegion.roi.size(); i++) {
                     Point p1 = mPriorPoints.get(i);
                     Point p2 = mCurrentRegion.roi.get(i);
                     lerp(p1, p2, mCurrentPoints.get(i), valueAnimator.getAnimatedFraction());
                 }
-                invalidate();
+            }
+            else {
+                for(int i = 0; i < mCurrentPoints.size(); i++) {
+                    Point p1 = mPriorPoints.get(i);
+                    Point p2 = mDefaultPoints.get(i);
+                    lerp(p1, p2, mCurrentPoints.get(i), valueAnimator.getAnimatedFraction());
+                }
             }
         });
         mCurrentAnimation.start();

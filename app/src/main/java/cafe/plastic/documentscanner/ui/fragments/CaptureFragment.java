@@ -104,10 +104,7 @@ public class CaptureFragment extends Fragment {
         mCompositeDisposable.add(mObjectTracker.processedOutput()
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(region -> {
-                    if(region.state != PageDetector.State.NONE) {
-                        mCaptureFragmentBinding.featureOverlay.updateRegion(region);
-                    }
-
+                    mCaptureFragmentBinding.featureOverlay.updateRegion(region);
                     if (lockCounter == -1) return;
                     if (region.state != PageDetector.State.LOCKED) {
                         lockCounter = 0;
@@ -252,7 +249,7 @@ public class CaptureFragment extends Fragment {
             mViewModel.flashState.setValue(flash);
         }
 
-        public void onOutlineButtonClicked() {
+        public void onOutlineButtonClicked(View view) {
             CameraState.Outline outline = mViewModel.outlineState.getValue();
             if (outline == CameraState.Outline.OFF) {
                 outline = CameraState.Outline.ON;
