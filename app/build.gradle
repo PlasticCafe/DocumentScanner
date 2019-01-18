@@ -23,7 +23,7 @@ android {
     }
     sourceSets {
         main {
-            jniLibs.srcDirs = [".externalNativeBuild/cmake/src/opencv/sdk/native/libs/"]
+            jniLibs.srcDirs = ["$OPENCV_SDK/native/libs/"]
         }
     }
     buildTypes {
