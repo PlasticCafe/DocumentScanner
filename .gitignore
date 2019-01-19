@@ -8,4 +8,6 @@
 .DS_Store
 /build
 /captures
+gradle.properties
+/app/gradle.properties
 .externalNativeBuild

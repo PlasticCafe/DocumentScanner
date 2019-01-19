@@ -18,13 +18,14 @@ import java.util.Arrays;
 
 import androidx.annotation.Nullable;
 import cafe.plastic.documentscanner.R;
+import cafe.plastic.documentscanner.util.Quad;
 import cafe.plastic.documentscanner.vision.PageDetector;
 
 public class FeatureOverlay extends View {
     private PageDetector.Region mCurrentRegion;
-    private final ArrayList<Point> mDefaultPoints;
-    private final ArrayList<Point> mPriorPoints;
-    private final ArrayList<Point> mCurrentPoints;
+    private final Quad mDefaultPoints;
+    private final Quad mPriorPoints;
+    private final Quad mCurrentPoints;
     private int mDefaultSquareWidth;
     private Paint mStrokePaint;
     private Paint mFillPaint;
@@ -34,7 +35,7 @@ public class FeatureOverlay extends View {
     public FeatureOverlay(Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
         init(attrs);
-        mPriorPoints = new ArrayList<>(Arrays.asList(new Point(), new Point(), new Point(), new Point()));
+        mPriorPoints = new Quad()
         mCurrentPoints = new ArrayList<>(Arrays.asList(new Point(), new Point(), new Point(), new Point()));
         mDefaultPoints = new ArrayList<>(Arrays.asList(new Point(), new Point(), new Point(), new Point()));
     }
