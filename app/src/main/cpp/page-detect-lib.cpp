@@ -9,18 +9,18 @@ PageDetector *getPointer(JNIEnv *env, jobject instance) {
 }
 
 std::vector<cv::Point> listPointToVectorPoint(JNIEnv *env, jobject roi) {
-    jclass listClass = env->FindClass("java/util/List");
-    jclass pointClass = env->FindClass("android/graphics/Point");
+    jclass listClass = env->FindClass("java/util/ArrayList");
+    jclass pointClass = env->FindClass("cafe/plastic/documentscanner/util/Vec2");
     jmethodID getSize = env->GetMethodID(listClass, "size", "()I");
     jmethodID get = env->GetMethodID(listClass, "get", "(I)Ljava/lang/Object;");
-    jfieldID fX = env->GetFieldID(pointClass, "x", "I");
-    jfieldID fY = env->GetFieldID(pointClass, "y", "I");
+    jfieldID fX = env->GetFieldID(pointClass, "x", "F");
+    jfieldID fY = env->GetFieldID(pointClass, "y", "F");
     jint size = env->CallIntMethod(roi, getSize);
     std::vector<cv::Point> vecRoi;
     for (jint i = 0; i < size; i++) {
         jobject point = env->CallObjectMethod(roi, get, i);
-        int x = env->GetIntField(point, fX);
-        int y = env->GetIntField(point, fY);
+        int x = (int)env->GetFloatField(point, fX);
+        int y = (int)env->GetFloatField(point, fY);
         vecRoi.push_back(cv::Point(x, y));
     }
     return vecRoi;
@@ -29,14 +29,14 @@ std::vector<cv::Point> listPointToVectorPoint(JNIEnv *env, jobject roi) {
 
 jobject resultsToArrayList(JNIEnv *env, std::vector<cv::Point> roi) {
     jclass arrayListClass = env->FindClass("java/util/ArrayList");
-    jclass pointClass = env->FindClass("android/graphics/Point");
+    jclass pointClass = env->FindClass("cafe/plastic/documentscanner/util/Vec2");
 
     jobject arrayList = env->NewObject(arrayListClass,
                                        env->GetMethodID(arrayListClass, "<init>", "()V"));
     for (int i = 0; i < roi.size(); i++) {
-        jobject point = env->NewObject(pointClass, env->GetMethodID(pointClass, "<init>", "(II)V"),
-                                       roi[i].x,
-                                       roi[i].y);
+        jobject point = env->NewObject(pointClass, env->GetMethodID(pointClass, "<init>", "(FF)V"),
+                                       (jfloat )roi[i].x,
+                                       (jfloat )roi[i].y);
         env->CallBooleanMethod(arrayList,
                                env->GetMethodID(arrayListClass, "add", "(Ljava/lang/Object;)Z"),
                                point);

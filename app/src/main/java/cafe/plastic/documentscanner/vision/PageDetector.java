@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import cafe.plastic.documentscanner.util.Quad;
+import cafe.plastic.documentscanner.util.Vec2;
 
 public class PageDetector {
     private boolean mReleased = false;
@@ -17,9 +18,9 @@ public class PageDetector {
 
     private native long Create();
     private native void Release();
-    private native Quad GetRoi(byte[] frame, int width, int height);
-    private native float GetArea(Quad roi);
-    private native float GetDistortion(Quad roi);
+    private native ArrayList<Vec2> GetRoi(byte[] frame, int width, int height);
+    private native float GetArea(ArrayList<Vec2> vecs);
+    private native float GetDistortion(ArrayList<Vec2> vecs);
     private native void ThresholdImage(Bitmap input);
     public enum State {
         LOCKED,
@@ -39,6 +40,13 @@ public class PageDetector {
             this.frameSize = frameSize;
             this.rotation = rotation;
         }
+
+        public Region(Region region) {
+            this.state = region.state;
+            this.roi = new Quad(region.roi);
+            this.frameSize = new Size(region.frameSize.getWidth(), region.frameSize.getHeight());
+            this.rotation = region.rotation;
+        }
     }
     PageDetector() {
         mHandle = Create();
@@ -46,12 +54,12 @@ public class PageDetector {
 
     Region detect(byte[] frame, int width, int height, int rotation) {
         if(mReleased)
-            throw new IllegalStateException("Detector has been mReleased");
-        Quad roi = GetRoi(frame, width, height);
+            throw new IllegalStateException("Detector has been released");
+        ArrayList<Vec2> roiPoints = GetRoi(frame, width, height);
+        Quad roi = new Quad(roiPoints);
         State state;
-        if(roi == null) {
+        if(roi == null || roiPoints.size() < 4) {
             state = State.NONE;
-            roi = new Quad();
         } else if(distorted(roi)) {
             state = State.PERSPECTIVE;
         } else if(frameArea(width, height, roi) < 0.30) {
@@ -73,13 +81,13 @@ public class PageDetector {
     }
 
     private boolean distorted(Quad roi) {
-        float distortion = GetDistortion(roi);
+        float distortion = GetDistortion(roi.getVecs());
         return distortion > 25;
     }
 
     private float frameArea(int width, int height, Quad roi) {
         float framePixelArea =width * height;
-        float roiPixelArea =  GetArea(roi);
+        float roiPixelArea =  GetArea(roi.getVecs());
         return roiPixelArea / framePixelArea;
     }
 }

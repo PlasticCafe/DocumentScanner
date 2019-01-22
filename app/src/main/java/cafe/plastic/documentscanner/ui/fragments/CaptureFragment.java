@@ -127,7 +127,7 @@ public class CaptureFragment extends Fragment {
                         .observeOn(Schedulers.computation())
                         .map(p -> {
                             mFotoapparat.stop();
-                            return mObjectTracker.processPhoto(p.first, p.second, getContext());
+                            return mObjectTracker.processPhoto(p.first, new PageDetector.Region(p.second), getContext());
                         })
                         .observeOn(AndroidSchedulers.mainThread())
                         .subscribe(b -> {

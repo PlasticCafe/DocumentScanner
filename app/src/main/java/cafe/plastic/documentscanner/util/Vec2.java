@@ -18,8 +18,12 @@ public class Vec2 {
     }
 
     public Vec2 set(Vec2 srcVec) {
-        x = srcVec.x;
-        y = srcVec.y;
+        return set(srcVec.x, srcVec.y);
+    }
+
+    public Vec2 set(float x, float y) {
+        this.x = x;
+        this.y = y;
         return this;
     }
 
@@ -65,15 +69,15 @@ public class Vec2 {
         return this;
     }
 
-    public Vec2 lerp(Vec2 v2, float t) {
-        float xt =  (1.0f - t) * x + v2.x * t;
-        float yt =  (1.0f - t) * y + v2.y * t;
+    public static Vec2 lerp(Vec2 v1, Vec2 v2, float t) {
+        float xt =  (1.0f - t) * v1.x + v2.x * t;
+        float yt =  (1.0f - t) * v1.y + v2.y * t;
         return new Vec2(xt, yt);
     }
 
-    public Vec2 lerpInPlace(Vec2 v2, float t) {
-        x = (1.0f - t) * x + v2.x * t;
-        y = (1.0f - t) * y + v2.y * t;
+    public Vec2 lerpInPlace(Vec2 v1, Vec2 v2, float t) {
+        x = (1.0f - t) * v1.x + v2.x * t;
+        y = (1.0f - t) * v1.y + v2.y * t;
         return this;
     }
 

@@ -14,11 +14,7 @@ public class Quad {
 
     public Quad(ArrayList<Vec2> inVecs) {
         this();
-        if (inVecs.size() == 4) {
-            for (int i = 0; i < 4; i++) {
-                mPoints.get(i).set(inVecs.get(i));
-            }
-        }
+        this.set(inVecs);
     }
 
     public Quad(Quad inQuad) {
@@ -34,32 +30,72 @@ public class Quad {
         return new Quad(scaledVecs);
     }
 
+    public Quad scaleInPlace(float scalar) {
+        for(Vec2 vec : mPoints) {
+            vec.mulInPlace(scalar);
+        }
+        return this;
+    }
+
+    public ArrayList<Vec2> getVecs() {
+        ArrayList<Vec2> copy = new ArrayList<>();
+        for(Vec2 vec: mPoints) {
+            copy.add(new Vec2(vec));
+        }
+        return copy;
+    }
+
     public Vec2 getCenter() {
         Vec2 center = new Vec2();
         for (Vec2 point : mPoints) {
-            center.add(point);
+            center.addInPlace(point);
         }
-        return center.mul(0.25f);
+        return center.mulInPlace(0.25f);
     }
 
     public Vec2 getDimensions() {
         double width = Math.max(
-                mPoints.get(3).sub(mPoints.get(0)).len(),
-                mPoints.get(2).sub(mPoints.get(1)).len());
-        double height = Math.max(
                 mPoints.get(0).sub(mPoints.get(1)).len(),
                 mPoints.get(3).sub(mPoints.get(2)).len());
+        double height = Math.max(
+                mPoints.get(0).sub(mPoints.get(3)).len(),
+                mPoints.get(1).sub(mPoints.get(2)).len());
         return new Vec2((float) width, (float) height);
     }
 
-    public Quad lerp(Quad q2, float t) {
+    public Quad lerp(Quad q1, Quad q2, float t) {
         ArrayList<Vec2> lerpedVecs = new ArrayList<>();
         for (int i = 0; i < 4; i++) {
-            lerpedVecs.add(mPoints.get(i).lerp(q2.mPoints.get(i), t));
+            lerpedVecs.add(Vec2.lerp(q1.mPoints.get(i), q2.mPoints.get(i), t));
         }
         return new Quad(lerpedVecs);
     }
 
+    public Quad lerpInPlace(Quad q1, Quad q2, float t) {
+        for(int i = 0; i < 4; i++) {
+            mPoints.get(i).lerpInPlace(q1.mPoints.get(i), q2.mPoints.get(i), t);
+        }
+        return this;
+    }
+
+    public void set(Quad inQuad) {
+        set(inQuad.mPoints);
+    }
+
+    public void set(ArrayList<Vec2> inVecs) {
+        if(inVecs.size() == 4) {
+            for (int i = 0; i < 4; i++) {
+                mPoints.get(i).set(inVecs.get(i));
+            }
+        }
+    }
+
+    public void set(float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4) {
+        mPoints.get(0).set(x1, y1);
+        mPoints.get(1).set(x2, y2);
+        mPoints.get(2).set(x3, y3);
+        mPoints.get(3).set(x4, y4);
+    }
     public Path toPath() {
         Path path = new Path();
         path.moveTo(mPoints.get(0).getX(), mPoints.get(0).getY());

@@ -8,24 +8,22 @@ import android.graphics.Color;
 import android.graphics.DashPathEffect;
 import android.graphics.Paint;
 import android.graphics.Path;
-import android.graphics.Point;
 import android.graphics.Typeface;
 import android.util.AttributeSet;
 import android.view.View;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-
 import androidx.annotation.Nullable;
 import cafe.plastic.documentscanner.R;
 import cafe.plastic.documentscanner.util.Quad;
+import cafe.plastic.documentscanner.util.Vec2;
 import cafe.plastic.documentscanner.vision.PageDetector;
 
 public class FeatureOverlay extends View {
-    private PageDetector.Region mCurrentRegion;
-    private final Quad mDefaultPoints;
-    private final Quad mPriorPoints;
-    private final Quad mCurrentPoints;
+    private PageDetector.Region mLastestRegion;
+    private final Quad mDefaultQuad;
+    private final Quad mPriorQuad;
+    private final Quad mCurrentQuad;
     private int mDefaultSquareWidth;
     private Paint mStrokePaint;
     private Paint mFillPaint;
@@ -35,9 +33,9 @@ public class FeatureOverlay extends View {
     public FeatureOverlay(Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
         init(attrs);
-        mPriorPoints = new Quad()
-        mCurrentPoints = new ArrayList<>(Arrays.asList(new Point(), new Point(), new Point(), new Point()));
-        mDefaultPoints = new ArrayList<>(Arrays.asList(new Point(), new Point(), new Point(), new Point()));
+        mDefaultQuad = new Quad();
+        mPriorQuad = new Quad();
+        mCurrentQuad = new Quad();
     }
 
     private void init(@Nullable AttributeSet attrs) {
@@ -64,24 +62,12 @@ public class FeatureOverlay extends View {
     @Override
     public void draw(Canvas canvas) {
         super.draw(canvas);
-        Path path = new Path();
-        int centerx = 0;
-        int centery = 0;
-        path.moveTo(mCurrentPoints.get(0).x, mCurrentPoints.get(0).y);
-        for (int i = 1; i <= 4; i++) {
-            centerx += mCurrentPoints.get(i % 4).x;
-            centery += mCurrentPoints.get(i % 4).y;
-            path.lineTo(
-                    mCurrentPoints.get(i % 4).x,
-                    mCurrentPoints.get(i % 4).y);
-        }
-        path.close();
-        centerx /= 4;
-        centery /= 4;
+        Path path = mCurrentQuad.toPath();
+        Vec2 center = mCurrentQuad.getCenter();
         canvas.drawPath(path, mFillPaint);
         canvas.drawPath(path, mStrokePaint);
-        mTextPaint.setTextSize(mDefaultSquareWidth/4);
-        canvas.drawText("TestText", centerx, centery, mTextPaint);
+        mTextPaint.setTextSize(mDefaultSquareWidth/4.0f);
+        canvas.drawText("TestText", center.getX(), center.getY(), mTextPaint);
     }
 
     @Override
@@ -94,64 +80,50 @@ public class FeatureOverlay extends View {
         int rightX = leftX + mDefaultSquareWidth*2;
         int topY = height/2 - mDefaultSquareWidth;
         int bottomY = topY + mDefaultSquareWidth*2;
-        mDefaultPoints.get(0).set(rightX, topY);
-        mDefaultPoints.get(1).set(rightX, bottomY);
-        mDefaultPoints.get(2).set(leftX, bottomY);
-        mDefaultPoints.get(3).set(leftX, topY);
+        mDefaultQuad.set(rightX, topY, rightX, bottomY, leftX, bottomY, leftX, topY);
     }
 
     public void updateRegion(PageDetector.Region region) {
-        for (int i = 0; i < mCurrentPoints.size(); i++) {
-            mPriorPoints.get(i).set(
-                    mCurrentPoints.get(i).x,
-                    mCurrentPoints.get(i).y);
-        }
-        mCurrentRegion = regionToScreen(region);
+        mPriorQuad.set(mCurrentQuad);
+        mLastestRegion = quadToScreen(region);
         if (mCurrentAnimation != null) mCurrentAnimation.cancel();
         mCurrentAnimation = ValueAnimator.ofFloat(0f, 1.0f).setDuration(100);
         mCurrentAnimation.addUpdateListener(valueAnimator -> {
-            if (mCurrentRegion != null && mCurrentRegion.state != PageDetector.State.NONE) {
-                for (int i = 0; i < mCurrentRegion.roi.size(); i++) {
-                    Point p1 = mPriorPoints.get(i);
-                    Point p2 = mCurrentRegion.roi.get(i);
-                    lerp(p1, p2, mCurrentPoints.get(i), valueAnimator.getAnimatedFraction());
-                }
+            if (mLastestRegion.state != PageDetector.State.NONE) {
+                mCurrentQuad.lerpInPlace(mPriorQuad, mLastestRegion.roi, valueAnimator.getAnimatedFraction());
             }
             else {
-                for(int i = 0; i < mCurrentPoints.size(); i++) {
-                    Point p1 = mPriorPoints.get(i);
-                    Point p2 = mDefaultPoints.get(i);
-                    lerp(p1, p2, mCurrentPoints.get(i), valueAnimator.getAnimatedFraction());
-                }
+                mCurrentQuad.lerpInPlace(mPriorQuad, mDefaultQuad, valueAnimator.getAnimatedFraction());
             }
         });
         mCurrentAnimation.start();
-
         invalidate();
 
     }
 
-    private PageDetector.Region regionToScreen(PageDetector.Region region) {
-        ArrayList<Point> sourcePoints = region.roi;
-        ArrayList<Point> screenPoints = new ArrayList<>();
-        int xd, yd;
-        for (Point point : sourcePoints) {
+    private PageDetector.Region quadToScreen(PageDetector.Region region) {
+        ArrayList<Vec2> sourcePoints = region.roi.getVecs();
+        ArrayList<Vec2> screenPoints = new ArrayList<>();
+        float xd, yd;
+        for (Vec2 vec : sourcePoints) {
+            float x = vec.getX();
+            float y = vec.getY();
             switch (region.rotation) {
                 case (90):
-                    xd = point.y;
-                    yd = region.frameSize.getWidth() - point.x;
+                    xd = y;
+                    yd = region.frameSize.getWidth() - x;
                     break;
                 case (180):
-                    xd = region.frameSize.getWidth() - point.x;
-                    yd = region.frameSize.getHeight() - point.y;
+                    xd = region.frameSize.getWidth() - x;
+                    yd = region.frameSize.getHeight() - y;
                     break;
                 case (270):
-                    xd = region.frameSize.getHeight() - point.y;
-                    yd = point.x;
+                    xd = region.frameSize.getHeight() - y;
+                    yd = x;
                     break;
                 default:
-                    xd = point.x;
-                    yd = point.y;
+                    xd = x;
+                    yd = y;
                     break;
             }
             float scale = Math.max((float) this.getMeasuredWidth() / region.frameSize.getHeight(),
@@ -161,19 +133,8 @@ public class FeatureOverlay extends View {
 
             int excessX = Math.max(0, (width - this.getMeasuredWidth()) / 2);
             int excessY = Math.max(0, (height - this.getMeasuredHeight()) / 2);
-            screenPoints.add(new Point((int) (xd * scale) - excessX, (int) (yd * scale) - excessY));
+            screenPoints.add(new Vec2( xd * scale - excessX, yd * scale - excessY));
         }
-        return new PageDetector.Region(region.state, screenPoints, region.frameSize, region.rotation);
-    }
-
-    private void lerp(Point p1, Point p2, Point output, float t) {
-        int x1 = p1.x;
-        int x2 = p2.x;
-        int y1 = p1.y;
-        int y2 = p2.y;
-
-        int xt = (int) ((1.0f - t) * x1 + x2 * t);
-        int yt = (int) ((1.0f - t) * y1 + y2 * t);
-        output.set(xt, yt);
+        return new PageDetector.Region(region.state, new Quad(screenPoints), region.frameSize, region.rotation);
     }
 }
