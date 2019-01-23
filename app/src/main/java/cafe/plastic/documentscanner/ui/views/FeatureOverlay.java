@@ -8,11 +8,13 @@ import android.graphics.Color;
 import android.graphics.DashPathEffect;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.util.AttributeSet;
 import android.view.View;
 
 import java.util.ArrayList;
+
 import androidx.annotation.Nullable;
 import cafe.plastic.documentscanner.R;
 import cafe.plastic.documentscanner.util.Quad;
@@ -25,9 +27,15 @@ public class FeatureOverlay extends View {
     private final Quad mPriorQuad;
     private final Quad mCurrentQuad;
     private int mDefaultSquareWidth;
+    private float mLockProgress = 0;
+    private float mCrosshairSize;
     private Paint mStrokePaint;
     private Paint mFillPaint;
     private Paint mTextPaint;
+    private String mSearchText;
+    private String mPerspectiveText;
+    private String mSizeText;
+    private String mLockedText;
     private ValueAnimator mCurrentAnimation;
 
     public FeatureOverlay(Context context, @Nullable AttributeSet attrs) {
@@ -39,23 +47,29 @@ public class FeatureOverlay extends View {
     }
 
     private void init(@Nullable AttributeSet attrs) {
+        TypedArray ta = getContext().obtainStyledAttributes(attrs, R.styleable.FeatureOverlay);
         mFillPaint = new Paint();
-        mStrokePaint = new Paint();
-        mTextPaint = new Paint();
         mFillPaint.setStyle(Paint.Style.FILL);
         mFillPaint.setAntiAlias(true);
+        mFillPaint.setColor(ta.getColor(R.styleable.FeatureOverlay_fill_color, Color.WHITE));
+
+        float strokeWidth = ta.getDimensionPixelSize(R.styleable.FeatureOverlay_stroke_width, 1);
+        mStrokePaint = new Paint();
         mStrokePaint.setStyle(Paint.Style.STROKE);
         mStrokePaint.setAntiAlias((true));
-        if (attrs == null) return;
-        TypedArray ta = getContext().obtainStyledAttributes(attrs, R.styleable.FeatureOverlay);
-        mFillPaint.setColor(ta.getColor(R.styleable.FeatureOverlay_fill_color, Color.WHITE));
         mStrokePaint.setColor(ta.getColor(R.styleable.FeatureOverlay_stroke_color, Color.BLACK));
-        float strokeWidth = ta.getDimensionPixelSize(R.styleable.FeatureOverlay_stroke_width, 1);
         mStrokePaint.setStrokeWidth(strokeWidth);
-        mStrokePaint.setPathEffect(new DashPathEffect(new float[] {strokeWidth*3, strokeWidth}, 0));
 
+        mTextPaint = new Paint();
         mTextPaint.setTypeface(Typeface.create("Arial", Typeface.NORMAL));
         mTextPaint.setTextSize(200);
+
+        mSearchText = ta.getString(R.styleable.FeatureOverlay_search_text);
+        mPerspectiveText = ta.getString(R.styleable.FeatureOverlay_perspective_text);
+        mSizeText = ta.getString(R.styleable.FeatureOverlay_size_text);
+        mLockedText = ta.getString(R.styleable.FeatureOverlay_locked_text);
+
+        mCrosshairSize = strokeWidth * 4;
         ta.recycle();
     }
 
@@ -64,10 +78,37 @@ public class FeatureOverlay extends View {
         super.draw(canvas);
         Path path = mCurrentQuad.toPath();
         Vec2 center = mCurrentQuad.getCenter();
-        canvas.drawPath(path, mFillPaint);
         canvas.drawPath(path, mStrokePaint);
-        mTextPaint.setTextSize(mDefaultSquareWidth/4.0f);
-        canvas.drawText("TestText", center.getX(), center.getY(), mTextPaint);
+        mTextPaint.setTextSize(mDefaultSquareWidth / 4.0f);
+        Rect bounds = new Rect();
+        PageDetector.State state;
+        String stateText;
+        if (mLastestRegion != null)
+            state = mLastestRegion.state;
+        else
+            state = PageDetector.State.NONE;
+
+        switch (state) {
+            case NONE:
+                stateText = mSearchText;
+                break;
+            case PERSPECTIVE:
+                stateText = mPerspectiveText;
+                break;
+            case SIZE:
+                stateText = mSizeText;
+                break;
+            case LOCKED:
+                stateText = mLockedText;
+                break;
+            default:
+                stateText = mSearchText;
+                break;
+        }
+        canvas.drawPath(mCurrentQuad.copy().scale(mLockProgress).translate(center.getX()*(1 - mLockProgress), center.getY()*(1 - mLockProgress)).toPath(), mFillPaint);
+        canvas.drawLine(center.getX() - mCrosshairSize, center.getY(), center.getX() + mCrosshairSize, center.getY(), mStrokePaint);
+        canvas.drawLine(center.getX(), center.getY() - mCrosshairSize, center.getX(), center.getY() + mCrosshairSize, mStrokePaint);
+        //canvas.drawText(stateText, center.getX() - bounds.width() / 2, center.getY() + bounds.height() / 2, mTextPaint);
     }
 
     @Override
@@ -75,25 +116,26 @@ public class FeatureOverlay extends View {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
         int width = View.MeasureSpec.getSize(widthMeasureSpec);
         int height = View.MeasureSpec.getSize(heightMeasureSpec);
-        mDefaultSquareWidth = (int)Math.min(width * 0.20f, height * 0.20f);
-        int leftX = width/2 - mDefaultSquareWidth;
-        int rightX = leftX + mDefaultSquareWidth*2;
-        int topY = height/2 - mDefaultSquareWidth;
-        int bottomY = topY + mDefaultSquareWidth*2;
+        mDefaultSquareWidth = (int) Math.min(width * 0.09f, height * 0.09f);
+        int leftX = width / 2 - mDefaultSquareWidth;
+        int rightX = leftX + mDefaultSquareWidth * 2;
+        int topY = height / 2 - mDefaultSquareWidth;
+        int bottomY = topY + mDefaultSquareWidth * 2;
         mDefaultQuad.set(rightX, topY, rightX, bottomY, leftX, bottomY, leftX, topY);
+        mCurrentQuad.set(mDefaultQuad);
     }
 
-    public void updateRegion(PageDetector.Region region) {
+    public void updateRegion(PageDetector.Region region, float lockProgress) {
+        mLockProgress = lockProgress;
         mPriorQuad.set(mCurrentQuad);
         mLastestRegion = quadToScreen(region);
         if (mCurrentAnimation != null) mCurrentAnimation.cancel();
-        mCurrentAnimation = ValueAnimator.ofFloat(0f, 1.0f).setDuration(100);
+        mCurrentAnimation = ValueAnimator.ofFloat(0f, 1.0f).setDuration(300);
         mCurrentAnimation.addUpdateListener(valueAnimator -> {
             if (mLastestRegion.state != PageDetector.State.NONE) {
-                mCurrentQuad.lerpInPlace(mPriorQuad, mLastestRegion.roi, valueAnimator.getAnimatedFraction());
-            }
-            else {
-                mCurrentQuad.lerpInPlace(mPriorQuad, mDefaultQuad, valueAnimator.getAnimatedFraction());
+                mCurrentQuad.lerp(mPriorQuad, mLastestRegion.roi, valueAnimator.getAnimatedFraction());
+            } else {
+                mCurrentQuad.lerp(mPriorQuad, mDefaultQuad, valueAnimator.getAnimatedFraction());
             }
         });
         mCurrentAnimation.start();
@@ -133,7 +175,7 @@ public class FeatureOverlay extends View {
 
             int excessX = Math.max(0, (width - this.getMeasuredWidth()) / 2);
             int excessY = Math.max(0, (height - this.getMeasuredHeight()) / 2);
-            screenPoints.add(new Vec2( xd * scale - excessX, yd * scale - excessY));
+            screenPoints.add(new Vec2(xd * scale - excessX, yd * scale - excessY));
         }
         return new PageDetector.Region(region.state, new Quad(screenPoints), region.frameSize, region.rotation);
     }

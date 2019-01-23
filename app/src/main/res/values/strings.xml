@@ -10,4 +10,8 @@
     <string name="settings_desc">Settings</string>
     <string name="about_desc">About</string>
     <string name="camera_button_desc">Take picture</string>
+    <string name="searching_text">SEARCHING...</string>
+    <string name="perspective_text">PERSPECTIVE</string>
+    <string name="size_text">GET CLOSER</string>
+    <string name="locked_text">HOLD STILL...</string>
 </resources>

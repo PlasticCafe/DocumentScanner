@@ -104,19 +104,19 @@ public class CaptureFragment extends Fragment {
         mCompositeDisposable.add(mObjectTracker.processedOutput()
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(region -> {
-                    mCaptureFragmentBinding.featureOverlay.updateRegion(region);
                     if (lockCounter == -1) return;
                     if (region.state != PageDetector.State.LOCKED) {
                         lockCounter = 0;
                     } else {
                         lockCounter++;
                     }
-
-                    if (lockCounter > 40) {
+                    mCaptureFragmentBinding.featureOverlay.updateRegion(region, lockCounter/20.0f);
+                    if (lockCounter > 19) {
                         mFotoapparat.focus();
                         capture();
                         lockCounter = -1;
                     }
+
                 }));
 
         mCompositeDisposable

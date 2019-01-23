@@ -21,16 +21,11 @@ public class Quad {
         this(inQuad.mPoints);
     }
 
-    public Quad scale(float scalar) {
-        ArrayList<Vec2> scaledVecs = new ArrayList<>();
-        for (Vec2 vec : mPoints) {
-            scaledVecs.add(vec.mul(scalar));
-        }
-
-        return new Quad(scaledVecs);
+    public Quad copy() {
+        return new Quad(this);
     }
 
-    public Quad scaleInPlace(float scalar) {
+    public Quad scale(float scalar) {
         for(Vec2 vec : mPoints) {
             vec.mulInPlace(scalar);
         }
@@ -64,16 +59,15 @@ public class Quad {
     }
 
     public Quad lerp(Quad q1, Quad q2, float t) {
-        ArrayList<Vec2> lerpedVecs = new ArrayList<>();
-        for (int i = 0; i < 4; i++) {
-            lerpedVecs.add(Vec2.lerp(q1.mPoints.get(i), q2.mPoints.get(i), t));
-        }
-        return new Quad(lerpedVecs);
-    }
-
-    public Quad lerpInPlace(Quad q1, Quad q2, float t) {
         for(int i = 0; i < 4; i++) {
             mPoints.get(i).lerpInPlace(q1.mPoints.get(i), q2.mPoints.get(i), t);
+        }
+        return this;
+    }
+
+    public Quad translate(float x, float y) {
+        for(Vec2 vec: mPoints) {
+            vec.addInPlace(x, y);
         }
         return this;
     }

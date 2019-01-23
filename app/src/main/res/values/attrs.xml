@@ -4,5 +4,9 @@
         <attr name="fill_color" format="color" />
         <attr name="stroke_color" format="color" />
         <attr name="stroke_width" format="dimension" />
+        <attr name="search_text" format="string"/>
+        <attr name="perspective_text" format="string"/>
+        <attr name="size_text" format="string"/>
+        <attr name="locked_text" format="string"/>
     </declare-styleable>
 </resources>

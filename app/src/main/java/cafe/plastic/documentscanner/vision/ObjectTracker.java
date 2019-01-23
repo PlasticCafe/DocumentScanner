@@ -30,7 +30,7 @@ public class ObjectTracker extends VisionFrameProcessor<PageDetector.Region> {
         Bitmap bitmap = BitmapFactory.decodeByteArray(photoBytes, 0, photoBytes.length, options);
         float scale =  (float)bitmap.getWidth() / region.frameSize.getWidth();
         Matrix matrix = new Matrix();
-        region.roi.scaleInPlace(scale);
+        region.roi.scale(scale);
         Vec2 dims = region.roi.getDimensions();
         Bitmap processed = Bitmap.createBitmap((int)dims.getX(), (int)dims.getY(), Bitmap.Config.RGB_565);
         Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);

@@ -40,13 +40,21 @@ public class Vec2 {
     }
 
     public Vec2 add(Vec2 rhs) {
-        return new Vec2(x + rhs.x, y + rhs.y);
+        return add(rhs.x, rhs.y);
+    }
+
+    public Vec2 add(float x, float y) {
+        return new Vec2(this.x + x, this.y + y);
     }
 
     public Vec2 addInPlace(Vec2 rhs) {
-        this.x += rhs.x;
-        this.y += rhs.y;
-        return this;
+        return addInPlace(rhs.x, rhs.y);
+    }
+
+    public Vec2 addInPlace(float x, float y) {
+       this.x += x;
+       this.y += y;
+       return this;
     }
 
     public Vec2 sub(Vec2 rhs) {

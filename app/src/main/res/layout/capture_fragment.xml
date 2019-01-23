@@ -32,7 +32,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:visibility="gone"
-            app:constraint_referenced_ids="captureProgressBackground, captureProgress" />
+            app:constraint_referenced_ids=" captureProgress" />
 
         <io.fotoapparat.view.CameraView
             android:id="@+id/camera_view"
@@ -53,8 +53,12 @@
             android:layout_width="0dp"
             android:layout_height="0dp"
             app:fill_color="@color/popupMenuBackground"
-            app:stroke_color="@color/popupMenuBackgroundDark"
-            app:stroke_width="5dp"
+            app:stroke_color="@color/captureBoxReticle"
+            app:stroke_width="6dp"
+            app:search_text="@string/searching_text"
+            app:perspective_text="@string/perspective_text"
+            app:size_text="@string/size_text"
+            app:locked_text="@string/locked_text"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintHorizontal_bias="1.0"
@@ -190,16 +194,6 @@
             app:layout_constraintStart_toStartOf="@+id/popupMenuBackground"
             app:srcCompat="@drawable/ic_info"
             android:contentDescription="@string/about_desc" />
-
-        <View
-            android:id="@+id/captureProgressBackground"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:background="@color/captureProgressBackground"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
 
         <ProgressBar
             android:id="@+id/captureProgress"
