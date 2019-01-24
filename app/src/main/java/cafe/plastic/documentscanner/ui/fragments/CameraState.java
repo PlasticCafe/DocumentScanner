@@ -1,13 +1,13 @@
 package cafe.plastic.documentscanner.ui.fragments;
 
 public class CameraState {
-        public enum Flash {
+        public enum FlashMode {
             OFF,
             ON
         }
 
-        public enum Outline {
-            ON,
-            OFF
+        public enum CaptureMode {
+            AUTO,
+            MANUAL
         }
     }

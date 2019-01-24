@@ -44,13 +44,13 @@ public class CaptureFragment extends Fragment {
     private CaptureViewModel mViewModel;
     private Fotoapparat mFotoapparat;
     private CaptureFragmentBinding mCaptureFragmentBinding;
-    private boolean mCaptureLoading = false;
-    private boolean mMenuOpen = false;
-    private boolean mButtonsHidden = false;
     private final ObjectTracker mObjectTracker = new ObjectTracker();
     private final CompositeDisposable mCompositeDisposable = new CompositeDisposable();
     private final PublishProcessor<Photo> mPhotoObserver = PublishProcessor.create();
-    private int lockCounter = 0;
+    private float mCaptureTimeout = 1.5f;
+    private float mCurrentCaptureTime = 0.0f;
+    private boolean mLocked = false;
+    private long mLockTime = 0;
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
@@ -66,8 +66,8 @@ public class CaptureFragment extends Fragment {
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
         mViewModel = ViewModelProviders.of(requireActivity()).get(CaptureViewModel.class);
-        mViewModel.flashState.observe(this, f -> configureCamera());
-        mViewModel.outlineState.observe(this, o -> configureCamera());
+        mViewModel.flashMode.observe(this, f -> configureCamera());
+        mViewModel.captureMode.observe(this, o -> configureCamera());
         mCaptureFragmentBinding.setViewmodel(mViewModel);
         mCaptureFragmentBinding.setLifecycleOwner(this);
         requestPermissions(new String[]{Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE}, 0);
@@ -82,7 +82,6 @@ public class CaptureFragment extends Fragment {
         mFotoapparat.start();
         configureObservers();
         configureCamera();
-        initializeUI();
     }
 
     @Override
@@ -104,19 +103,31 @@ public class CaptureFragment extends Fragment {
         mCompositeDisposable.add(mObjectTracker.processedOutput()
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(region -> {
-                    if (lockCounter == -1) return;
+                    mViewModel.captureState.setValue(region);
                     if (region.state != PageDetector.State.LOCKED) {
-                        lockCounter = 0;
+                        mLocked = false;
+                        mCurrentCaptureTime = 0.0f;
+                        mCaptureFragmentBinding.captureButton.setEnabled(false);
                     } else {
-                        lockCounter++;
+                        if (mLocked) {
+                            long delta = System.currentTimeMillis() - mLockTime;
+                            mLockTime = System.currentTimeMillis();
+                            mCurrentCaptureTime += delta / 1000.0f;
+                        } else {
+                            mLockTime = System.currentTimeMillis();
+                            mLocked = true;
+                        }
+                        if (mCurrentCaptureTime >= mCaptureTimeout) {
+                            mCurrentCaptureTime = mCaptureTimeout;
+                            if (mViewModel.captureMode.getValue() == CameraState.CaptureMode.AUTO) {
+                                mFotoapparat.focus();
+                                capture();
+                            } else {
+                                mCaptureFragmentBinding.captureButton.setEnabled(true);
+                            }
+                        }
                     }
-                    mCaptureFragmentBinding.featureOverlay.updateRegion(region, lockCounter/20.0f);
-                    if (lockCounter > 19) {
-                        mFotoapparat.focus();
-                        capture();
-                        lockCounter = -1;
-                    }
-
+                    mCaptureFragmentBinding.featureOverlay.updateRegion(region, mCurrentCaptureTime / mCaptureTimeout);
                 }));
 
         mCompositeDisposable
@@ -133,10 +144,10 @@ public class CaptureFragment extends Fragment {
                         .subscribe(b -> {
                             Toast.makeText(getContext(), "Image saved.", Toast.LENGTH_SHORT).show();
                             mViewModel.currentPhoto.setValue(b);
-                            lockCounter = 0;
+                            mLocked = false;
+                            mCaptureFragmentBinding.captureButton.setEnabled(false);
                             NavHostFragment.findNavController(CaptureFragment.this)
                                     .navigate(R.id.action_captureFragment_to_confirmFragment);
-                            toggleCaptureLoading();
                         }));
     }
 
@@ -149,38 +160,38 @@ public class CaptureFragment extends Fragment {
                 .frameProcessor(mObjectTracker)
                 .build();
     }
+
     private void configureCamera() {
         CameraConfiguration.Builder builder = new CameraConfiguration.Builder();
-        if(mViewModel.flashState.getValue() != null) {
-            switch (mViewModel.flashState.getValue()) {
-                case OFF:
-                    builder.flash(FlashSelectorsKt.off());
-                    break;
-                case ON:
-                    builder.flash(FlashSelectorsKt.torch());
-                    break;
-                default:
-                    builder.flash(FlashSelectorsKt.off());
-            }
+        switch (mViewModel.flashMode.getValue()) {
+            case OFF:
+                builder.flash(FlashSelectorsKt.off());
+                break;
+            case ON:
+                builder.flash(FlashSelectorsKt.torch());
+                break;
+            default:
+                builder.flash(FlashSelectorsKt.off());
         }
 
-        if(mViewModel.outlineState.getValue() != null) {
-            switch (mViewModel.outlineState.getValue()) {
-                case OFF:
-                    break;
-                case ON:
-                    break;
-                default:
-            }
+        switch (mViewModel.captureMode.getValue()) {
+            case AUTO:
+                mCaptureFragmentBinding.captureButton.setEnabled(false);
+                animate(R.layout.capture_fragment_capture_button_off, 100, new LinearInterpolator());
+                break;
+            case MANUAL:
+                mCaptureFragmentBinding.captureButton.setEnabled(true);
+                animate(R.layout.capture_fragment_capture_button_on, 100, new LinearInterpolator());
+                break;
+            default:
         }
         mFotoapparat.updateConfiguration(builder.build());
     }
 
     private void capture() {
-        toggleCaptureLoading();
         mFotoapparat.takePicture().toPendingResult().whenDone(photo -> {
             Timber.d("Got photo");
-            if(photo != null) {
+            if (photo != null) {
                 mPhotoObserver.onNext(photo);
             }
         });
@@ -196,77 +207,31 @@ public class CaptureFragment extends Fragment {
         target.applyTo(mCaptureFragmentBinding.constraintLayout);
     }
 
-    private void toggleMenu(boolean state, int time) {
-        if (state)
-            animate(R.layout.capture_fragment_menu_open, time, new LinearInterpolator());
-        else
-            animate(R.layout.capture_fragment_menu_closed, time, new LinearInterpolator());
-        mMenuOpen = !mMenuOpen;
-    }
-
-    private void toggleButtons(boolean state, int time) {
-        if (state)
-            animate(R.layout.capture_fragment_buttons_shown, time, new LinearInterpolator());
-        else
-            animate(R.layout.capture_fragment_buttons_hidden, time, new LinearInterpolator());
-        mButtonsHidden = !mButtonsHidden;
-    }
-
-    private void toggleCaptureLoading() {
-        if (mCaptureLoading) {
-            Timber.d("Hiding loading UI");
-            mCaptureFragmentBinding.loadinggroup.setVisibility(View.GONE);
-            toggleButtons(true, 100);
-            mCaptureLoading = false;
-        } else {
-            Timber.d("Throwing up loading UI");
-            mCaptureFragmentBinding.loadinggroup.setVisibility(View.VISIBLE);
-            toggleButtons(false, 100);
-            toggleMenu(false, 100);
-            mCaptureLoading = true;
-        }
-    }
-
-    private void initializeUI() {
-        toggleButtons(true, 0);
-        toggleMenu(false, 0);
-    }
-
-
     public class Handlers {
+
+        public void onFlashButtonClicked(View view) {
+            CameraState.FlashMode flash = mViewModel.flashMode.getValue();
+            if (flash == CameraState.FlashMode.ON) {
+                flash = CameraState.FlashMode.OFF;
+            } else {
+                flash = CameraState.FlashMode.ON;
+            }
+            mViewModel.flashMode.setValue(flash);
+        }
+
+        public void onCaptureModeButtonClicked(View view) {
+            CameraState.CaptureMode outline = mViewModel.captureMode.getValue();
+            if (outline == CameraState.CaptureMode.AUTO) {
+                outline = CameraState.CaptureMode.MANUAL;
+
+            } else {
+                outline = CameraState.CaptureMode.AUTO;
+            }
+            mViewModel.captureMode.setValue(outline);
+        }
 
         public void onCaptureButtonClicked(View view) {
             capture();
-        }
-
-        public void onFlashButtonClicked(View view) {
-            CameraState.Flash flash = mViewModel.flashState.getValue();
-            if (flash == CameraState.Flash.OFF) {
-                flash = CameraState.Flash.ON;
-            } else if (flash == CameraState.Flash.ON) {
-                flash = CameraState.Flash.OFF;
-            }
-            mViewModel.flashState.setValue(flash);
-        }
-
-        public void onOutlineButtonClicked(View view) {
-            CameraState.Outline outline = mViewModel.outlineState.getValue();
-            if (outline == CameraState.Outline.OFF) {
-                outline = CameraState.Outline.ON;
-            } else {
-                outline = CameraState.Outline.OFF;
-            }
-            mViewModel.outlineState.setValue(outline);
-        }
-
-        public void onMenuOpened(View view) {
-            toggleMenu(true, 100);
-            toggleButtons(false, 100);
-        }
-
-        public void onMenuClosed(View view) {
-            toggleMenu(false, 100);
-            toggleButtons(true, 100);
         }
     }
 }

@@ -2,26 +2,48 @@ package cafe.plastic.documentscanner.ui;
 
 import android.graphics.drawable.Drawable;
 import android.widget.ImageButton;
+import android.widget.TextView;
 
 import androidx.databinding.BindingAdapter;
 import cafe.plastic.documentscanner.ui.fragments.CameraState;
+import cafe.plastic.documentscanner.vision.PageDetector;
 
 public class Bindings {
-    @BindingAdapter({"flashState", "flashOff", "flashOn"})
-    public static void updateFlashButton(ImageButton view, CameraState.Flash flashState, Drawable flashOff, Drawable flashOn) {
-        if(flashState == CameraState.Flash.ON)
+    @BindingAdapter({"flashMode", "flashOnIcon", "flashOffIcon"})
+    public static void updateFlashButton(ImageButton view, CameraState.FlashMode flashMode, Drawable flashOn, Drawable flashOff) {
+        if (flashMode == CameraState.FlashMode.ON)
             view.setImageDrawable(flashOn);
         else
             view.setImageDrawable(flashOff);
     }
 
-    @BindingAdapter({"outlineState", "outlineOff", "outlineOn"})
-    public static void updateOutlineButton(ImageButton view, CameraState.Outline outlineState, Drawable outlineOff, Drawable outlineOn) {
-        if (outlineState == CameraState.Outline.ON)
-            view.setImageDrawable(outlineOn);
+    @BindingAdapter({"captureMode", "captureAutoIcon", "captureManualIcon"})
+    public static void updateOutlineButton(ImageButton view, CameraState.CaptureMode captureMode, Drawable captureAuto, Drawable captureManual) {
+        if (captureMode == CameraState.CaptureMode.AUTO)
+            view.setImageDrawable(captureAuto);
         else
-            view.setImageDrawable(outlineOff);
+            view.setImageDrawable(captureManual);
+    }
 
+    @BindingAdapter({"captureState", "searchingText", "perspectiveText", "sizeText", "lockedText"})
+    public static void updateStatusText(TextView view, PageDetector.Region captureState, String searchingText, String perspectiveText, String sizeText, String lockedText) {
+        if(captureState == null) return;
+        switch(captureState.state) {
+            case NONE:
+                view.setText(searchingText);
+                break;
+            case PERSPECTIVE:
+                view.setText(perspectiveText);
+                break;
+            case SIZE:
+                view.setText(sizeText);
+                break;
+            case LOCKED:
+                view.setText(lockedText);
+                break;
+            default:
+                view.setText(searchingText);
+        }
     }
 }
 

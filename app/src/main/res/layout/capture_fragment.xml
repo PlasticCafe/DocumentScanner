@@ -21,23 +21,15 @@
         tools:context=".ui.fragments.CaptureFragment">
 
         <androidx.constraintlayout.widget.Group
-            android:id="@+id/uigroup"
+            android:id="@+id/ui_group"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:visibility="visible" />
-
-        <androidx.constraintlayout.widget.Group
-            android:id="@+id/loadinggroup"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:visibility="gone"
-            app:constraint_referenced_ids=" captureProgress" />
 
         <io.fotoapparat.view.CameraView
             android:id="@+id/camera_view"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            android:onClickListener="@{handlers::onMenuClosed}"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintHorizontal_bias="1.0"
@@ -48,65 +40,149 @@
         </io.fotoapparat.view.CameraView>
 
         <cafe.plastic.documentscanner.ui.views.FeatureOverlay
-            android:id="@+id/featureOverlay"
+            android:id="@+id/feature_overlay"
             android:layout_width="0dp"
             android:layout_height="0dp"
             app:fill_color="@color/popupMenuBackground"
-            app:stroke_color="@color/captureBoxReticle"
-            app:stroke_width="6dp"
-            app:search_text="@string/searching_text"
-            app:perspective_text="@string/perspective_text"
-            app:size_text="@string/size_text"
-            app:locked_text="@string/locked_text"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintHorizontal_bias="1.0"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintVertical_bias="0.0" />
+            app:layout_constraintVertical_bias="0.0"
+            app:locked_text="@string/locked_text"
+            app:perspective_text="@string/perspective_text"
+            app:search_text="@string/searching_text"
+            app:size_text="@string/size_text"
+            app:stroke_color="@color/captureBoxReticle"
+            app:stroke_width="6dp" />
+
 
         <io.fotoapparat.view.FocusView
-            android:id="@+id/focusView"
+            android:id="@+id/focus_view"
             android:layout_width="0dp"
             android:layout_height="0dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" >
+            app:layout_constraintTop_toTopOf="parent">
 
         </io.fotoapparat.view.FocusView>
-
-        <ImageButton
-            android:id="@+id/invisibleCancelButton"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:layout_marginTop="8dp"
-            android:layout_marginBottom="8dp"
-            android:background="@null"
-            android:contentDescription="@string/close_overlay_desc"
-            android:onClickListener="@{handlers::onMenuClosed}"
-            android:visibility="gone"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-
-        <ProgressBar
-            android:id="@+id/captureProgress"
-            style="?android:attr/progressBarStyle"
-            android:layout_width="96dp"
-            android:layout_height="96dp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
 
         <View
             android:id="@+id/capture_menu_anchor"
             android:layout_width="wrap_content"
-            android:layout_height="48dp"
+            android:layout_height="68dp"
+            android:background="@color/colorPrimary"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent" />
+
+        <ImageButton
+            android:id="@+id/capture_button"
+            android:layout_width="58dp"
+            android:layout_height="0dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginEnd="4dp"
+            android:layout_marginBottom="4dp"
+            android:background="@drawable/circular_background_selector"
+            android:contentDescription="@string/camera_button_desc"
+            android:padding="3dp"
+            android:scaleType="fitCenter"
+            android:onClickListener="@{handlers::onCaptureButtonClicked}"
+            app:srcCompat="@drawable/ic_camera"
+            app:layout_constraintBottom_toBottomOf="@+id/capture_menu_anchor"
+            app:layout_constraintEnd_toStartOf="@+id/buttons_divider"
+            app:layout_constraintTop_toTopOf="@+id/capture_menu_anchor"
+            app:layout_constraintVertical_bias="1.0"
+            tools:src="@drawable/ic_camera" />
+
+        <TextView
+            android:id="@+id/capture_status"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_marginEnd="4dp"
+            android:background="@color/colorPrimaryDark"
+            android:gravity="center|start"
+            android:paddingStart="8dp"
+            android:paddingEnd="0dp"
+            android:textColor="@android:color/white"
+            android:textSize="20sp"
+            app:captureState="@{viewmodel.captureState}"
+            app:searchingText="@{@string/searching_text}"
+            app:perspectiveText="@{@string/perspective_text}"
+            app:sizeText="@{@string/size_text}"
+            app:lockedText="@{@string/locked_text}"
+            app:layout_constraintBottom_toBottomOf="@+id/capture_menu_anchor"
+            app:layout_constraintEnd_toStartOf="@+id/capture_button"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@+id/capture_menu_anchor"
+            tools:text="@string/searching_text" />
+
+        <View
+            android:id="@+id/buttons_divider"
+            android:layout_width="3dp"
+            android:layout_height="0dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginEnd="4dp"
+            android:layout_marginBottom="4dp"
+            android:background="@color/colorPrimaryDark"
+            app:layout_constraintBottom_toBottomOf="@+id/capture_menu_anchor"
+            app:layout_constraintEnd_toStartOf="@+id/flash_toggle"
+            app:layout_constraintTop_toTopOf="@+id/capture_menu_anchor"
+            app:layout_constraintVertical_bias="1.0" />
+
+        <ImageButton
+            android:id="@+id/flash_toggle"
+            android:layout_width="48dp"
+            android:layout_height="0dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginEnd="4dp"
+            android:layout_marginBottom="8dp"
+            android:background="@color/colorPrimaryDark"
+            android:contentDescription="@string/flash_button_desc"
+            android:onClickListener="@{handlers::onFlashButtonClicked}"
+            app:flashMode="@{viewmodel.flashMode}"
+            app:flashOnIcon="@{@drawable/ic_flash_on}"
+            app:flashOffIcon="@{@drawable/ic_flash_off}"
+            app:layout_constraintBottom_toBottomOf="@+id/capture_status"
+            app:layout_constraintEnd_toStartOf="@+id/auto_toggle"
+            app:layout_constraintTop_toTopOf="@+id/capture_status"
+            app:layout_constraintVertical_bias="1.0"
+            tools:src="@drawable/ic_flash_on" />
+
+        <ImageButton
+            android:id="@+id/auto_toggle"
+            android:layout_width="48dp"
+            android:layout_height="0dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginBottom="8dp"
+            android:background="@color/colorPrimaryDark"
+            android:onClick="@{handlers::onCaptureModeButtonClicked}"
+            android:contentDescription="@string/toggle_cap_button_desc"
+            app:captureMode="@{viewmodel.captureMode}"
+            app:captureAutoIcon="@{@drawable/ic_outline_on}"
+            app:captureManualIcon="@{@drawable/ic_outline_off}"
+
+            app:layout_constraintBottom_toBottomOf="@+id/capture_menu_anchor"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@+id/capture_menu_anchor"
+            app:layout_constraintVertical_bias="0.0"
+            tools:src="@drawable/ic_settings" />
+        <ProgressBar
+            android:id="@+id/capture_progress"
+            style="?android:attr/progressBarStyle"
+            android:layout_width="96dp"
+            android:layout_height="96dp"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+
+
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </layout>

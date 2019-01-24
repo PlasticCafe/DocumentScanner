@@ -5,11 +5,8 @@ import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.DashPathEffect;
 import android.graphics.Paint;
 import android.graphics.Path;
-import android.graphics.Rect;
-import android.graphics.Typeface;
 import android.util.AttributeSet;
 import android.view.View;
 
@@ -31,11 +28,6 @@ public class FeatureOverlay extends View {
     private float mCrosshairSize;
     private Paint mStrokePaint;
     private Paint mFillPaint;
-    private Paint mTextPaint;
-    private String mSearchText;
-    private String mPerspectiveText;
-    private String mSizeText;
-    private String mLockedText;
     private ValueAnimator mCurrentAnimation;
 
     public FeatureOverlay(Context context, @Nullable AttributeSet attrs) {
@@ -60,15 +52,6 @@ public class FeatureOverlay extends View {
         mStrokePaint.setColor(ta.getColor(R.styleable.FeatureOverlay_stroke_color, Color.BLACK));
         mStrokePaint.setStrokeWidth(strokeWidth);
 
-        mTextPaint = new Paint();
-        mTextPaint.setTypeface(Typeface.create("Arial", Typeface.NORMAL));
-        mTextPaint.setTextSize(200);
-
-        mSearchText = ta.getString(R.styleable.FeatureOverlay_search_text);
-        mPerspectiveText = ta.getString(R.styleable.FeatureOverlay_perspective_text);
-        mSizeText = ta.getString(R.styleable.FeatureOverlay_size_text);
-        mLockedText = ta.getString(R.styleable.FeatureOverlay_locked_text);
-
         mCrosshairSize = strokeWidth * 4;
         ta.recycle();
     }
@@ -79,36 +62,9 @@ public class FeatureOverlay extends View {
         Path path = mCurrentQuad.toPath();
         Vec2 center = mCurrentQuad.getCenter();
         canvas.drawPath(path, mStrokePaint);
-        mTextPaint.setTextSize(mDefaultSquareWidth / 4.0f);
-        Rect bounds = new Rect();
-        PageDetector.State state;
-        String stateText;
-        if (mLastestRegion != null)
-            state = mLastestRegion.state;
-        else
-            state = PageDetector.State.NONE;
-
-        switch (state) {
-            case NONE:
-                stateText = mSearchText;
-                break;
-            case PERSPECTIVE:
-                stateText = mPerspectiveText;
-                break;
-            case SIZE:
-                stateText = mSizeText;
-                break;
-            case LOCKED:
-                stateText = mLockedText;
-                break;
-            default:
-                stateText = mSearchText;
-                break;
-        }
         canvas.drawPath(mCurrentQuad.copy().scale(mLockProgress).translate(center.getX()*(1 - mLockProgress), center.getY()*(1 - mLockProgress)).toPath(), mFillPaint);
         canvas.drawLine(center.getX() - mCrosshairSize, center.getY(), center.getX() + mCrosshairSize, center.getY(), mStrokePaint);
         canvas.drawLine(center.getX(), center.getY() - mCrosshairSize, center.getX(), center.getY() + mCrosshairSize, mStrokePaint);
-        //canvas.drawText(stateText, center.getX() - bounds.width() / 2, center.getY() + bounds.height() / 2, mTextPaint);
     }
 
     @Override
@@ -130,7 +86,7 @@ public class FeatureOverlay extends View {
         mPriorQuad.set(mCurrentQuad);
         mLastestRegion = quadToScreen(region);
         if (mCurrentAnimation != null) mCurrentAnimation.cancel();
-        mCurrentAnimation = ValueAnimator.ofFloat(0f, 1.0f).setDuration(300);
+        mCurrentAnimation = ValueAnimator.ofFloat(0f, 1.0f).setDuration(1000);
         mCurrentAnimation.addUpdateListener(valueAnimator -> {
             if (mLastestRegion.state != PageDetector.State.NONE) {
                 mCurrentQuad.lerp(mPriorQuad, mLastestRegion.roi, valueAnimator.getAnimatedFraction());
