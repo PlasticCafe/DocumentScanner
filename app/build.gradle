@@ -44,11 +44,12 @@ android {
 }
 
 dependencies {
-    def nav_version = "1.0.0-alpha09"
+    def nav_version = "1.0.0-alpha10"
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation 'androidx.appcompat:appcompat:1.0.2'
     implementation 'androidx.constraintlayout:constraintlayout:2.0.0-alpha3'
     implementation 'androidx.lifecycle:lifecycle-extensions:2.0.0'
+    //noinspection GradleDependency
     implementation "android.arch.navigation:navigation-fragment:$nav_version"
     implementation "android.arch.navigation:navigation-ui:$nav_version"
     implementation 'io.reactivex.rxjava2:rxjava:2.2.2'

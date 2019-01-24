@@ -24,8 +24,7 @@
             android:id="@+id/uigroup"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:visibility="visible"
-            app:constraint_referenced_ids="captureButton,popupMenuBackground,backButton,flashToggle,outlineToggle,about" />
+            android:visibility="visible" />
 
         <androidx.constraintlayout.widget.Group
             android:id="@+id/loadinggroup"
@@ -73,50 +72,9 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintTop_toTopOf="parent" >
 
-        <ImageButton
-            android:id="@+id/settingsButton"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_marginStart="32dp"
-            android:layout_marginBottom="8dp"
-            android:background="@drawable/circular_background_selector"
-            android:onClickListener="@{handlers::onMenuOpened}"
-            app:layout_constraintBottom_toBottomOf="@+id/captureButton"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="@+id/captureButton"
-            app:layout_constraintVertical_bias="1.0"
-            app:srcCompat="@drawable/ic_settings"
-            android:contentDescription="@string/settings_desc" />
-
-        <ImageButton
-            android:id="@+id/documentsButton"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_marginEnd="32dp"
-            android:layout_marginBottom="8dp"
-            android:background="@drawable/circular_background_selector"
-            app:layout_constraintBottom_toBottomOf="@+id/captureButton"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="@+id/captureButton"
-            app:layout_constraintVertical_bias="1.0"
-            app:srcCompat="@drawable/ic_documents"
-            android:contentDescription="@string/docs_library_desc" />
-
-        <View
-            android:id="@+id/popupMenuBackground"
-            android:layout_width="96dp"
-            android:layout_height="0dp"
-            android:background="@color/popupMenuBackground"
-            android:clickable="true"
-            android:focusable="true"
-            android:paddingEnd="0dp"
-            android:paddingStart="0dp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintVertical_bias="1.0" />
+        </io.fotoapparat.view.FocusView>
 
         <ImageButton
             android:id="@+id/invisibleCancelButton"
@@ -125,75 +83,12 @@
             android:layout_marginTop="8dp"
             android:layout_marginBottom="8dp"
             android:background="@null"
+            android:contentDescription="@string/close_overlay_desc"
             android:onClickListener="@{handlers::onMenuClosed}"
             android:visibility="gone"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toEndOf="@+id/popupMenuBackground"
-            app:layout_constraintTop_toTopOf="parent"
-            android:contentDescription="@string/close_overlay_desc" />
-        <ImageButton
-            android:id="@+id/backButton"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_marginTop="8dp"
-            android:background="@drawable/circular_background_selector_pressed_only"
-            android:scaleType="center"
-            android:onClickListener="@{handlers::onMenuClosed}"
-            app:layout_constraintEnd_toEndOf="@+id/popupMenuBackground"
-            app:layout_constraintStart_toStartOf="@id/popupMenuBackground"
-            app:layout_constraintTop_toTopOf="parent"
-            app:srcCompat="@drawable/ic_arrow_back"
-            android:contentDescription="@string/back_button_desc"/>
-
-        <ImageButton
-            android:id="@+id/flashToggle"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_marginTop="48dp"
-            android:background="@drawable/circular_background_selector"
-            android:onClickListener="@{handlers::onFlashButtonClicked}"
-            android:padding="5dp"
-            android:scaleType="fitCenter"
-            app:flashState="@{viewmodel.flashState}"
-            app:flashOff="@{@drawable/ic_flash_off}"
-            app:flashOn="@{@drawable/ic_flash_on}"
-            app:layout_constraintEnd_toEndOf="@+id/popupMenuBackground"
-            app:layout_constraintStart_toStartOf="@id/popupMenuBackground"
-            app:layout_constraintTop_toBottomOf="@+id/backButton"
-            tools:src="@drawable/ic_flash_on"
-            android:contentDescription="@string/flash_button_desc" />
-
-        <ImageButton
-            android:id="@+id/outlineToggle"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_marginTop="48dp"
-            android:background="@drawable/circular_background_selector"
-            android:onClickListener="@{handlers::onOutlineButtonClicked}"
-            android:padding="5dp"
-            android:scaleType="fitCenter"
-            app:outlineState="@{viewmodel.outlineState}"
-            app:outlineOff="@{@drawable/ic_outline_off}"
-            app:outlineOn="@{@drawable/ic_outline_on}"
-            app:layout_constraintEnd_toEndOf="@+id/popupMenuBackground"
-            app:layout_constraintStart_toStartOf="@id/popupMenuBackground"
-            app:layout_constraintTop_toBottomOf="@+id/flashToggle"
-            tools:src="@drawable/ic_outline_on"
-            android:contentDescription="@string/toggle_outline_desc" />
-
-        <ImageView
-            android:id="@+id/about"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_marginBottom="8dp"
-            android:padding="8dp"
-            android:background="@drawable/circular_background_selector"
-            app:layout_constraintBottom_toBottomOf="@id/popupMenuBackground"
-            app:layout_constraintEnd_toEndOf="@+id/popupMenuBackground"
-            app:layout_constraintStart_toStartOf="@+id/popupMenuBackground"
-            app:srcCompat="@drawable/ic_info"
-            android:contentDescription="@string/about_desc" />
+            app:layout_constraintTop_toTopOf="parent" />
 
         <ProgressBar
             android:id="@+id/captureProgress"
@@ -205,21 +100,13 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <ImageButton
-            android:id="@+id/captureButton"
-            android:layout_width="76dp"
-            android:layout_height="76dp"
-            android:layout_marginStart="8dp"
-            android:layout_marginEnd="8dp"
-            android:layout_marginBottom="16dp"
-            android:background="@drawable/circular_background_selector"
-            android:onClickListener="@{handlers::onCaptureButtonClicked}"
-            android:padding="10dp"
-            android:scaleType="fitCenter"
+        <View
+            android:id="@+id/capture_menu_anchor"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:srcCompat="@drawable/ic_camera"
-            android:contentDescription="@string/camera_button_desc" />
+            app:layout_constraintStart_toStartOf="parent" />
+
     </androidx.constraintlayout.widget.ConstraintLayout>
 </layout>
