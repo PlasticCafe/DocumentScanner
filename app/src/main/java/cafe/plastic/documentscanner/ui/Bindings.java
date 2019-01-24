@@ -7,21 +7,20 @@ import androidx.databinding.BindingAdapter;
 import cafe.plastic.documentscanner.ui.fragments.CameraState;
 
 public class Bindings {
-    @BindingAdapter({"flashState", "flashOff", "flashOn"})
-    public static void updateFlashButton(ImageButton view, CameraState.Flash flashState, Drawable flashOff, Drawable flashOn) {
-        if(flashState == CameraState.Flash.ON)
+    @BindingAdapter({"flashMode", "flashOnIcon", "flashOffIcon"})
+    public static void updateFlashButton(ImageButton view, CameraState.FlashMode flashMode, Drawable flashOn, Drawable flashOff) {
+        if (flashMode == CameraState.FlashMode.ON)
             view.setImageDrawable(flashOn);
         else
             view.setImageDrawable(flashOff);
     }
 
-    @BindingAdapter({"outlineState", "outlineOff", "outlineOn"})
-    public static void updateOutlineButton(ImageButton view, CameraState.Outline outlineState, Drawable outlineOff, Drawable outlineOn) {
-        if (outlineState == CameraState.Outline.ON)
-            view.setImageDrawable(outlineOn);
+    @BindingAdapter({"captureMode", "captureAutoIcon", "captureManualIcon"})
+    public static void updateOutlineButton(ImageButton view, CameraState.CaptureMode captureMode, Drawable captureAuto, Drawable captureManual) {
+        if (captureMode == CameraState.CaptureMode.AUTO)
+            view.setImageDrawable(captureAuto);
         else
-            view.setImageDrawable(outlineOff);
-
+            view.setImageDrawable(captureManual);
     }
 }
 

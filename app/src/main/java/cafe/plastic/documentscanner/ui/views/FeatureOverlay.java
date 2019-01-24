@@ -130,7 +130,7 @@ public class FeatureOverlay extends View {
         mPriorQuad.set(mCurrentQuad);
         mLastestRegion = quadToScreen(region);
         if (mCurrentAnimation != null) mCurrentAnimation.cancel();
-        mCurrentAnimation = ValueAnimator.ofFloat(0f, 1.0f).setDuration(300);
+        mCurrentAnimation = ValueAnimator.ofFloat(0f, 1.0f).setDuration(60);
         mCurrentAnimation.addUpdateListener(valueAnimator -> {
             if (mLastestRegion.state != PageDetector.State.NONE) {
                 mCurrentQuad.lerp(mPriorQuad, mLastestRegion.roi, valueAnimator.getAnimatedFraction());
