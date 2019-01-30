@@ -9,6 +9,7 @@ import android.animation.TimeInterpolator;
 
 import androidx.databinding.DataBindingUtil;
 
+import android.graphics.pdf.PdfDocument;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
@@ -16,6 +17,7 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.transition.ChangeBounds;
 
+import android.util.LogPrinter;
 import android.util.Pair;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -41,6 +43,7 @@ import io.reactivex.schedulers.Schedulers;
 import timber.log.Timber;
 
 public class CaptureFragment extends Fragment {
+    private static final long MAX_LOCK_TIME = 2300;
     private CaptureViewModel mViewModel;
     private Fotoapparat mFotoapparat;
     private CaptureFragmentBinding mCaptureFragmentBinding;
@@ -102,46 +105,63 @@ public class CaptureFragment extends Fragment {
     private void configureObservers() {
         mCompositeDisposable.add(mObjectTracker.processedOutput()
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(region -> {
-                    mViewModel.captureState.setValue(region);
-                    if (region.state != PageDetector.State.LOCKED) {
-                        mLocked = false;
-                        mCurrentCaptureTime = 0.0f;
-                        mCaptureFragmentBinding.captureButton.setEnabled(false);
+                .scan(new Pair<PageDetector.Region, Long>(new PageDetector.Region(), 0L), (acc, current) -> {
+                    long diff = current.time - acc.first.time;
+                    long time = acc.second;
+                    if (current.state == PageDetector.State.LOCKED) {
+                        time += diff;
+                        if (time > MAX_LOCK_TIME) {
+                            time = MAX_LOCK_TIME;
+                        }
                     } else {
-                        if (mLocked) {
-                            long delta = System.currentTimeMillis() - mLockTime;
-                            mLockTime = System.currentTimeMillis();
-                            mCurrentCaptureTime += delta / 1000.0f;
-                        } else {
-                            mLockTime = System.currentTimeMillis();
-                            mLocked = true;
-                        }
-                        if (mCurrentCaptureTime >= mCaptureTimeout) {
-                            mCurrentCaptureTime = mCaptureTimeout;
-                            if (mViewModel.captureMode.getValue() == CameraState.CaptureMode.AUTO) {
-                                mFotoapparat.focus();
-                                capture();
-                            } else {
-                                mCaptureFragmentBinding.captureButton.setEnabled(true);
-                            }
-                        }
+                        if (diff > time)
+                            time = 0;
+                        else
+                            time -= diff;
                     }
-                    mCaptureFragmentBinding.featureOverlay.updateRegion(region, mCurrentCaptureTime / mCaptureTimeout);
+                    mCaptureFragmentBinding.featureOverlay.updateRegion(current, (float) time / MAX_LOCK_TIME);
+                    mViewModel.captureState.setValue(current);
+                    if (current.state == PageDetector.State.LOCKED && time == MAX_LOCK_TIME) {
+                        if (mViewModel.captureMode.getValue() == CameraState.CaptureMode.AUTO) {
+                            mFotoapparat.focus();
+                            capture();
+                        } else {
+                            mCaptureFragmentBinding.captureButton.setEnabled(true);
+                        }
+                    } else {
+                        mCaptureFragmentBinding.captureButton.setEnabled(false);
+                    }
+
+                    return new Pair<PageDetector.Region, Long>(current, time);
+                })
+                .subscribe(p -> {
+                    mCaptureFragmentBinding.featureOverlay.updateRegion(p.first, (float) p.second / MAX_LOCK_TIME);
+                    mViewModel.captureState.setValue(p.first);
+                    if (p.first.state == PageDetector.State.LOCKED && p.second == MAX_LOCK_TIME) {
+                        if (mViewModel.captureMode.getValue() == CameraState.CaptureMode.AUTO) {
+                            mFotoapparat.focus();
+                            capture();
+                        } else {
+                            mCaptureFragmentBinding.captureButton.setEnabled(true);
+                        }
+                    } else {
+                        mCaptureFragmentBinding.captureButton.setEnabled(false);
+                    }
                 }));
 
         mCompositeDisposable
                 .add(mPhotoObserver.toObservable()
-                        .withLatestFrom(mObjectTracker.processedOutput().toObservable()
-                                        .filter(r -> r.state == PageDetector.State.LOCKED),
-                                Pair::new)
+                        .withLatestFrom(mObjectTracker.processedOutput()
+                                .toObservable()
+                                .filter(r -> r.state == PageDetector.State.LOCKED), Pair::new)
                         .observeOn(Schedulers.computation())
                         .map(p -> {
                             mFotoapparat.stop();
                             return mObjectTracker.processPhoto(p.first, new PageDetector.Region(p.second), getContext());
                         })
                         .observeOn(AndroidSchedulers.mainThread())
-                        .subscribe(b -> {
+                        .subscribe(b ->
+                        {
                             Toast.makeText(getContext(), "Image saved.", Toast.LENGTH_SHORT).show();
                             mViewModel.currentPhoto.setValue(b);
                             mLocked = false;

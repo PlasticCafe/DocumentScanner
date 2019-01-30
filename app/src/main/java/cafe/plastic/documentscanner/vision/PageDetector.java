@@ -33,11 +33,20 @@ public class PageDetector {
         public final State state;
         public final Quad roi;
         public final Size frameSize;
+        public final long time;
         public final int rotation;
-        public Region(State state, Quad roi, Size frameSize, int rotation) {
+        public Region() {
+            this.state = State.NONE;
+            this.roi = new Quad();
+            this.frameSize = new Size(0, 0);
+            this.rotation = 0;
+            this.time = System.currentTimeMillis();
+        }
+        public Region(State state, Quad roi, Size frameSize, long time, int rotation) {
             this.state = state;
             this.roi = roi;
             this.frameSize = frameSize;
+            this.time = time;
             this.rotation = rotation;
         }
 
@@ -45,6 +54,7 @@ public class PageDetector {
             this.state = region.state;
             this.roi = new Quad(region.roi);
             this.frameSize = new Size(region.frameSize.getWidth(), region.frameSize.getHeight());
+            this.time = region.time;
             this.rotation = region.rotation;
         }
     }
@@ -67,7 +77,7 @@ public class PageDetector {
         } else {
             state= State.LOCKED;
         }
-        return new Region(state, roi, new Size(width, height), rotation);
+        return new Region(state, roi, new Size(width, height), System.currentTimeMillis(), rotation);
     }
 
     void release() {
