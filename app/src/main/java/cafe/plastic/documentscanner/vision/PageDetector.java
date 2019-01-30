@@ -34,6 +34,12 @@ public class PageDetector {
         public final Quad roi;
         public final Size frameSize;
         public final int rotation;
+        public Region() {
+            this.state = State.NONE;
+            this.roi = new Quad();
+            this.frameSize = new Size(0, 0);
+            this.rotation = 0;
+        }
         public Region(State state, Quad roi, Size frameSize, int rotation) {
             this.state = state;
             this.roi = roi;

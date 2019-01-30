@@ -101,6 +101,9 @@ public class CaptureFragment extends Fragment {
 
     private void configureObservers() {
         mCompositeDisposable.add(mObjectTracker.processedOutput()
+            .observeOn(AndroidSchedulers.mainThread())
+            .scan(new Pair<Long, PageDetector.Region>((0, new PageDetector.Region())))
+        mCompositeDisposable.add(mObjectTracker.processedOutput()
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(region -> {
                     mViewModel.captureState.setValue(region);
