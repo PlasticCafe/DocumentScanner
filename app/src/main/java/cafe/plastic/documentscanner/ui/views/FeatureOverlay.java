@@ -81,8 +81,7 @@ public class FeatureOverlay extends View {
         mCurrentQuad.set(mDefaultQuad);
     }
 
-    public void updateRegion(PageDetector.Region region, float lockProgress) {
-        mLockProgress = lockProgress;
+    public void updateRegion(PageDetector.Region region) {
         mPriorQuad.set(mCurrentQuad);
         mLastestRegion = quadToScreen(region);
         if (mCurrentAnimation != null) mCurrentAnimation.cancel();
@@ -97,6 +96,11 @@ public class FeatureOverlay extends View {
         mCurrentAnimation.start();
         invalidate();
 
+    }
+
+    public void updateLockTime(float lockProgress) {
+        mLockProgress = lockProgress;
+        invalidate();
     }
 
     private PageDetector.Region quadToScreen(PageDetector.Region region) {
@@ -133,6 +137,6 @@ public class FeatureOverlay extends View {
             int excessY = Math.max(0, (height - this.getMeasuredHeight()) / 2);
             screenPoints.add(new Vec2(xd * scale - excessX, yd * scale - excessY));
         }
-        return new PageDetector.Region(region.state, new Quad(screenPoints), region.frameSize, region.time, region.rotation);
+        return new PageDetector.Region(region.state, new Quad(screenPoints), region.frameSize, region.rotation);
     }
 }

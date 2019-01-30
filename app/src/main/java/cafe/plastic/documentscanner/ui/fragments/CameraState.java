@@ -10,4 +10,6 @@ public class CameraState {
             AUTO,
             MANUAL
         }
+
+        
     }

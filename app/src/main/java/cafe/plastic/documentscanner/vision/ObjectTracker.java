@@ -14,6 +14,7 @@ import cafe.plastic.documentscanner.util.Vec2;
 import io.fotoapparat.preview.Frame;
 import io.fotoapparat.result.Photo;
 import io.reactivex.Flowable;
+import io.reactivex.flowables.ConnectableFlowable;
 import timber.log.Timber;
 
 public class ObjectTracker extends VisionFrameProcessor<PageDetector.Region> {

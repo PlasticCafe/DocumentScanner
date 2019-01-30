@@ -9,7 +9,6 @@ import android.animation.TimeInterpolator;
 
 import androidx.databinding.DataBindingUtil;
 
-import android.graphics.pdf.PdfDocument;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
@@ -17,7 +16,6 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.transition.ChangeBounds;
 
-import android.util.LogPrinter;
 import android.util.Pair;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -25,7 +23,6 @@ import android.view.ViewGroup;
 import android.view.animation.LinearInterpolator;
 import android.widget.Toast;
 
-import androidx.navigation.fragment.NavHostFragment;
 import androidx.transition.TransitionManager;
 import cafe.plastic.documentscanner.R;
 import cafe.plastic.documentscanner.databinding.CaptureFragmentBinding;
@@ -36,6 +33,7 @@ import io.fotoapparat.configuration.CameraConfiguration;
 import io.fotoapparat.parameter.ScaleType;
 import io.fotoapparat.result.Photo;
 import io.fotoapparat.selector.FlashSelectorsKt;
+import io.reactivex.Flowable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.processors.PublishProcessor;
@@ -49,11 +47,9 @@ public class CaptureFragment extends Fragment {
     private CaptureFragmentBinding mCaptureFragmentBinding;
     private final ObjectTracker mObjectTracker = new ObjectTracker();
     private final CompositeDisposable mCompositeDisposable = new CompositeDisposable();
-    private final PublishProcessor<Photo> mPhotoObserver = PublishProcessor.create();
-    private float mCaptureTimeout = 1.5f;
-    private float mCurrentCaptureTime = 0.0f;
-    private boolean mLocked = false;
-    private long mLockTime = 0;
+    private final PublishProcessor<Boolean> mCaptureEvents = PublishProcessor.create();
+    private final Flowable<PageDetector.Region> mTrackerObserver = mObjectTracker.processedOutput();
+    private boolean mPendingManualCapture = false;
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
@@ -85,6 +81,7 @@ public class CaptureFragment extends Fragment {
         mFotoapparat.start();
         configureObservers();
         configureCamera();
+        mCaptureEvents.onNext(true);
     }
 
     @Override
@@ -103,72 +100,45 @@ public class CaptureFragment extends Fragment {
     }
 
     private void configureObservers() {
-        mCompositeDisposable.add(mObjectTracker.processedOutput()
-                .observeOn(AndroidSchedulers.mainThread())
-                .scan(new Pair<PageDetector.Region, Long>(new PageDetector.Region(), 0L), (acc, current) -> {
-                    long diff = current.time - acc.first.time;
-                    long time = acc.second;
-                    if (current.state == PageDetector.State.LOCKED) {
-                        time += diff;
-                        if (time > MAX_LOCK_TIME) {
-                            time = MAX_LOCK_TIME;
-                        }
-                    } else {
-                        if (diff > time)
-                            time = 0;
-                        else
-                            time -= diff;
-                    }
-                    mCaptureFragmentBinding.featureOverlay.updateRegion(current, (float) time / MAX_LOCK_TIME);
-                    mViewModel.captureState.setValue(current);
-                    if (current.state == PageDetector.State.LOCKED && time == MAX_LOCK_TIME) {
-                        if (mViewModel.captureMode.getValue() == CameraState.CaptureMode.AUTO) {
-                            mFotoapparat.focus();
-                            capture();
-                        } else {
-                            mCaptureFragmentBinding.captureButton.setEnabled(true);
-                        }
-                    } else {
-                        mCaptureFragmentBinding.captureButton.setEnabled(false);
-                    }
+        mCompositeDisposable.add(
+                mCaptureEvents.switchMap(ignored -> {
+                    Timber.d("Observable chain reset.");
+                    return mTrackerObserver
+                            .observeOn(AndroidSchedulers.mainThread())
+                            .timeInterval()
+                            .scan(0L, (acc, current) -> {
+                                if (current.value().state == PageDetector.State.LOCKED) {
+                                    acc += current.time();
+                                    if (acc > MAX_LOCK_TIME) {
+                                        acc = MAX_LOCK_TIME;
+                                    }
+                                } else {
+                                    if (acc < current.time())
+                                        acc = 0L;
+                                    else
+                                        acc -= current.time();
+                                }
+                                mCaptureFragmentBinding.featureOverlay.updateRegion(current.value());
+                                mCaptureFragmentBinding.featureOverlay.updateLockTime((float) acc / MAX_LOCK_TIME);
+                                mViewModel.captureState.setValue(current.value());
+                                return acc;
+                            })
+                            .filter(t -> t >= MAX_LOCK_TIME)
+                            .withLatestFrom(mTrackerObserver.filter(r -> r.state == PageDetector.State.LOCKED), Pair::new)
+                            .filter( t -> mViewModel.captureMode.getValue() == CameraState.CaptureMode.AUTO)
+                            .take(1)
+                            .observeOn(Schedulers.computation())
+                            .map(e -> {
+                                Photo photo = mFotoapparat.takePicture().toPendingResult().await();
+                                return mObjectTracker.processPhoto(photo, new PageDetector.Region(e.second), getContext());
+                            })
+                            .observeOn(AndroidSchedulers.mainThread());
 
-                    return new Pair<PageDetector.Region, Long>(current, time);
-                })
-                .subscribe(p -> {
-                    mCaptureFragmentBinding.featureOverlay.updateRegion(p.first, (float) p.second / MAX_LOCK_TIME);
-                    mViewModel.captureState.setValue(p.first);
-                    if (p.first.state == PageDetector.State.LOCKED && p.second == MAX_LOCK_TIME) {
-                        if (mViewModel.captureMode.getValue() == CameraState.CaptureMode.AUTO) {
-                            mFotoapparat.focus();
-                            capture();
-                        } else {
-                            mCaptureFragmentBinding.captureButton.setEnabled(true);
-                        }
-                    } else {
-                        mCaptureFragmentBinding.captureButton.setEnabled(false);
-                    }
+                }).subscribe(b -> {
+                    Toast.makeText(getContext(), "Image saved.", Toast.LENGTH_SHORT).show();
+                    mViewModel.currentPhoto.setValue(b);
+                    mCaptureEvents.onNext(true);
                 }));
-
-        mCompositeDisposable
-                .add(mPhotoObserver.toObservable()
-                        .withLatestFrom(mObjectTracker.processedOutput()
-                                .toObservable()
-                                .filter(r -> r.state == PageDetector.State.LOCKED), Pair::new)
-                        .observeOn(Schedulers.computation())
-                        .map(p -> {
-                            mFotoapparat.stop();
-                            return mObjectTracker.processPhoto(p.first, new PageDetector.Region(p.second), getContext());
-                        })
-                        .observeOn(AndroidSchedulers.mainThread())
-                        .subscribe(b ->
-                        {
-                            Toast.makeText(getContext(), "Image saved.", Toast.LENGTH_SHORT).show();
-                            mViewModel.currentPhoto.setValue(b);
-                            mLocked = false;
-                            mCaptureFragmentBinding.captureButton.setEnabled(false);
-                            NavHostFragment.findNavController(CaptureFragment.this)
-                                    .navigate(R.id.action_captureFragment_to_confirmFragment);
-                        }));
     }
 
     private void initializeCamera() {
@@ -193,28 +163,7 @@ public class CaptureFragment extends Fragment {
             default:
                 builder.flash(FlashSelectorsKt.off());
         }
-
-        switch (mViewModel.captureMode.getValue()) {
-            case AUTO:
-                mCaptureFragmentBinding.captureButton.setEnabled(false);
-                animate(R.layout.capture_fragment_capture_button_off, 100, new LinearInterpolator());
-                break;
-            case MANUAL:
-                mCaptureFragmentBinding.captureButton.setEnabled(true);
-                animate(R.layout.capture_fragment_capture_button_on, 100, new LinearInterpolator());
-                break;
-            default:
-        }
         mFotoapparat.updateConfiguration(builder.build());
-    }
-
-    private void capture() {
-        mFotoapparat.takePicture().toPendingResult().whenDone(photo -> {
-            Timber.d("Got photo");
-            if (photo != null) {
-                mPhotoObserver.onNext(photo);
-            }
-        });
     }
 
     private void animate(int targetLayout, int time, TimeInterpolator interpolator) {
@@ -248,10 +197,6 @@ public class CaptureFragment extends Fragment {
                 outline = CameraState.CaptureMode.AUTO;
             }
             mViewModel.captureMode.setValue(outline);
-        }
-
-        public void onCaptureButtonClicked(View view) {
-            capture();
         }
     }
 }
