@@ -82,6 +82,7 @@ public class CaptureFragment extends Fragment {
         configureObservers();
         configureCamera();
         mCaptureEvents.onNext(true);
+        animate(R.layout.capture_fragment_capturing_off, 200, new LinearInterpolator());
     }
 
     @Override
@@ -127,6 +128,10 @@ public class CaptureFragment extends Fragment {
                             .withLatestFrom(mTrackerObserver.filter(r -> r.state == PageDetector.State.LOCKED), Pair::new)
                             .filter( t -> mViewModel.captureMode.getValue() == CameraState.CaptureMode.AUTO)
                             .take(1)
+                            .map(i -> {
+                                animate(R.layout.capture_fragment_capturing_on, 200, new LinearInterpolator());
+                                return i;
+                            })
                             .observeOn(Schedulers.computation())
                             .map(e -> {
                                 Photo photo = mFotoapparat.takePicture().toPendingResult().await();
@@ -136,6 +141,7 @@ public class CaptureFragment extends Fragment {
 
                 }).subscribe(b -> {
                     Toast.makeText(getContext(), "Image saved.", Toast.LENGTH_SHORT).show();
+                    animate(R.layout.capture_fragment_capturing_off, 200, new LinearInterpolator());
                     mViewModel.currentPhoto.setValue(b);
                     mCaptureEvents.onNext(true);
                 }));
