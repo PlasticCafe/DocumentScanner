@@ -22,6 +22,16 @@
 
 
         <View
+            android:id="@+id/capture_loading_cover"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:background="@color/colorPrimary"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="parent" />
+
+        <View
             android:id="@+id/capture_menu_anchor"
             android:layout_width="wrap_content"
             android:layout_height="68dp"
@@ -41,7 +51,7 @@
             android:background="@color/colorPrimaryDark"
             android:gravity="center|start"
             android:paddingStart="8dp"
-            android:paddingEnd="0dp"
+            android:paddingEnd="8dp"
             android:textColor="@android:color/white"
             android:textSize="20sp"
             app:captureState="@{viewmodel.captureState}"
@@ -105,29 +115,6 @@
             app:layout_constraintTop_toTopOf="@+id/capture_menu_anchor"
             app:layout_constraintVertical_bias="0.0"
             tools:src="@drawable/ic_camera_on" />
-
-        <View
-            android:id="@+id/capture_loading_cover"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:background="@color/colorPrimary"
-            app:layout_constraintBottom_toTopOf="@+id/capture_menu_anchor"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="@+id/capture_menu_anchor" />
-
-        <ProgressBar
-            android:id="@+id/capture_progress"
-            style="?android:attr/progressBarStyle"
-            android:layout_width="96dp"
-            android:layout_height="0dp"
-            android:visibility="visible"
-            app:layout_constraintBottom_toBottomOf="@+id/capture_loading_cover"
-            app:layout_constraintEnd_toEndOf="@+id/capture_loading_cover"
-            app:layout_constraintStart_toStartOf="@+id/capture_loading_cover"
-            app:layout_constraintTop_toBottomOf="@+id/capture_loading_cover" />
-
-
 
 
     </androidx.constraintlayout.widget.ConstraintLayout>
