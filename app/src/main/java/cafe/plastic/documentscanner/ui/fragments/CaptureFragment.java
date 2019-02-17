@@ -3,11 +3,11 @@ package cafe.plastic.documentscanner.ui.fragments;
 import android.Manifest;
 
 import androidx.constraintlayout.widget.ConstraintSet;
+import androidx.databinding.DataBindingUtil;
 import androidx.lifecycle.ViewModelProviders;
 
 import android.animation.TimeInterpolator;
 
-import androidx.databinding.DataBindingUtil;
 
 import android.graphics.Bitmap;
 import android.os.Bundle;
@@ -15,7 +15,6 @@ import android.os.Bundle;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
-import androidx.navigation.Navigation;
 import androidx.navigation.fragment.NavHostFragment;
 import androidx.transition.ChangeBounds;
 
@@ -57,7 +56,6 @@ public class CaptureFragment extends Fragment {
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        Timber.d("onCreateView");
         mCaptureFragmentBinding = DataBindingUtil
                 .inflate(inflater, R.layout.capture_fragment, container, false);
         mCaptureFragmentBinding.setHandlers(new Handlers());
@@ -70,6 +68,7 @@ public class CaptureFragment extends Fragment {
         mViewModel = ViewModelProviders.of(requireActivity()).get(CaptureViewModel.class);
         mViewModel.flashMode.observe(this, f -> configureCamera());
         mViewModel.captureMode.observe(this, o -> configureCamera());
+        mCaptureFragmentBinding.setHandlers(new Handlers());
         mCaptureFragmentBinding.setViewmodel(mViewModel);
         mCaptureFragmentBinding.setLifecycleOwner(this);
         requestPermissions(new String[]{Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE}, 0);
@@ -151,7 +150,11 @@ public class CaptureFragment extends Fragment {
 
         mCompositeDisposable.add(
                 mCapturedImages
-                        .flatMapSingle(b -> mViewModel.imageManager.storeTempBitmap(b))
+                        .observeOn(Schedulers.io())
+                        .map(b -> {
+                            Timber.d("Current thread: " + Thread.currentThread().getName());
+                             return mViewModel.imageManager.storeTempBitmap(b);
+                        })
                         .observeOn(AndroidSchedulers.mainThread())
                         .subscribe(s -> {
                             Timber.d("Image saved to: " + s);

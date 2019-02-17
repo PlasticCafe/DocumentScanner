@@ -8,6 +8,7 @@ import android.net.Uri;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.UUID;
 
 import androidx.annotation.NonNull;
@@ -42,39 +43,19 @@ public class TempImageManager {
         }
     }
 
-    public Single<String> storeTempBitmap(Bitmap bitmap) {
-        return Single
-                .<String>create(s -> {
-                    String fileName = UUID.randomUUID().toString() + ".jpg";
-                    File file = new File(tempDir, fileName);
-                    try {
-                        FileOutputStream fos = new FileOutputStream(file);
-                        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fos);
-                        fos.close();
-                        s.onSuccess(fileName);
-                    } catch (Exception e) {
-                        s.onError(e);
-                    }
-                })
-                .subscribeOn(Schedulers.io())
-                .cache();
+    public String storeTempBitmap(Bitmap bitmap) throws IOException {
+        String fileName = UUID.randomUUID().toString() + ".jpg";
+        File file = new File(tempDir, fileName);
+        FileOutputStream fos = new FileOutputStream(file);
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fos);
+        fos.close();
+        return fileName;
     }
 
-    public Single<Bitmap> loadTempBitmap(String fileName) {
-        return Single
-                .<Bitmap>create(s -> {
-                    File file = new File(tempDir, fileName);
-                    try {
-                        if(!file.exists()) {
-                            throw new FileNotFoundException();
-                        }
-                        s.onSuccess(BitmapFactory.decodeFile(file.getAbsolutePath()));
-                    } catch(Exception e) {
-                        s.onError(e);
-                    }
-                })
-                .subscribeOn(Schedulers.io())
-                .cache();
+    public Bitmap loadTempBitmap(String fileName) throws FileNotFoundException {
+        File file = new File(tempDir, fileName);
+        if(!file.exists()) throw new FileNotFoundException();
+        return BitmapFactory.decodeFile(file.getAbsolutePath());
     }
 
 }

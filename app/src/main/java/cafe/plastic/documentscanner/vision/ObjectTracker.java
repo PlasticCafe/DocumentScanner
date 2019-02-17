@@ -42,7 +42,7 @@ public class ObjectTracker extends VisionFrameProcessor<PageDetector.Region> {
         };
         warp.setPolyToPoly(src, 0, dst, 0, 4);
         c.drawBitmap(bitmap, warp, p);
-        mPageDetector.thresholdImage(processed);
+       // mPageDetector.thresholdImage(processed);
         matrix.postRotate(-1*region.rotation);
         processed = Bitmap.createBitmap(processed, 0, 0, processed.getWidth(), processed.getHeight(), matrix, false);
         return processed;
