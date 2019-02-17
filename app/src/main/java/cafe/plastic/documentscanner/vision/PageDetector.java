@@ -23,6 +23,7 @@ public class PageDetector {
     private native float GetDistortion(ArrayList<Vec2> vecs);
     private native void ThresholdImage(Bitmap input);
     public enum State {
+        CAPTURE,
         LOCKED,
         PERSPECTIVE,
         SIZE,

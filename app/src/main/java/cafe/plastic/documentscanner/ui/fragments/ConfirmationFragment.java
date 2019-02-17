@@ -14,14 +14,21 @@ import com.github.chrisbanes.photoview.PhotoView;
 
 import androidx.lifecycle.ViewModelProviders;
 import cafe.plastic.documentscanner.R;
+import cafe.plastic.documentscanner.util.TempImageManager;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.disposables.CompositeDisposable;
 
 @SuppressWarnings("WeakerAccess")
 public class ConfirmationFragment extends Fragment {
 
     private PhotoView takenPicture;
+    private TempImageManager imageManager;
+    private String imageLocation;
+    CompositeDisposable observers = new CompositeDisposable();
 
     public ConfirmationFragment() {
         // Required empty public constructor
+        imageManager = TempImageManager.getInstance(getContext());
     }
 
 
@@ -35,13 +42,29 @@ public class ConfirmationFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+        imageLocation = ConfirmationFragmentArgs.fromBundle(getArguments()).getImageFileName();
         takenPicture = view.findViewById(R.id.takenPicture);
+
     }
 
     @Override
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-        CaptureViewModel mViewModel = ViewModelProviders.of(requireActivity()).get(CaptureViewModel.class);
-        mViewModel.currentPhoto.observe(this, photo -> takenPicture.setImageBitmap(photo));
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        observers.add(imageManager.loadTempBitmap(imageLocation)
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(b -> {
+                    takenPicture.setImageBitmap(b);
+                }));
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        observers.dispose();
     }
 }

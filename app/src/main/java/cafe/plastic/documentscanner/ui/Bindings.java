@@ -25,10 +25,10 @@ public class Bindings {
             view.setImageDrawable(captureManual);
     }
 
-    @BindingAdapter({"captureState", "searchingText", "perspectiveText", "sizeText", "lockedText"})
-    public static void updateStatusText(TextView view, PageDetector.Region captureState, String searchingText, String perspectiveText, String sizeText, String lockedText) {
+    @BindingAdapter({"captureState", "searchingText", "perspectiveText", "sizeText", "lockedText", "captureText"})
+    public static void updateStatusText(TextView view, PageDetector.State captureState, String searchingText, String perspectiveText, String sizeText, String lockedText, String captureText) {
         if(captureState == null) return;
-        switch(captureState.state) {
+        switch(captureState) {
             case NONE:
                 view.setText(searchingText);
                 break;
@@ -40,6 +40,9 @@ public class Bindings {
                 break;
             case LOCKED:
                 view.setText(lockedText);
+                break;
+            case CAPTURE:
+                view.setText(captureText);
                 break;
             default:
                 view.setText(searchingText);

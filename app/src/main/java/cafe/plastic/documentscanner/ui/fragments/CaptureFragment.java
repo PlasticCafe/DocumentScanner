@@ -9,11 +9,14 @@ import android.animation.TimeInterpolator;
 
 import androidx.databinding.DataBindingUtil;
 
+import android.graphics.Bitmap;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.navigation.Navigation;
+import androidx.navigation.fragment.NavHostFragment;
 import androidx.transition.ChangeBounds;
 
 import android.util.Pair;
@@ -23,6 +26,8 @@ import android.view.ViewGroup;
 import android.view.animation.LinearInterpolator;
 import android.widget.Toast;
 
+import java.util.concurrent.TimeUnit;
+
 import androidx.transition.TransitionManager;
 import cafe.plastic.documentscanner.R;
 import cafe.plastic.documentscanner.databinding.CaptureFragmentBinding;
@@ -31,7 +36,6 @@ import cafe.plastic.documentscanner.vision.PageDetector;
 import io.fotoapparat.Fotoapparat;
 import io.fotoapparat.configuration.CameraConfiguration;
 import io.fotoapparat.parameter.ScaleType;
-import io.fotoapparat.result.Photo;
 import io.fotoapparat.selector.FlashSelectorsKt;
 import io.reactivex.Flowable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
@@ -47,9 +51,8 @@ public class CaptureFragment extends Fragment {
     private CaptureFragmentBinding mCaptureFragmentBinding;
     private final ObjectTracker mObjectTracker = new ObjectTracker();
     private final CompositeDisposable mCompositeDisposable = new CompositeDisposable();
-    private final PublishProcessor<Boolean> mCaptureEvents = PublishProcessor.create();
+    private final PublishProcessor<Bitmap> mCapturedImages = PublishProcessor.create();
     private final Flowable<PageDetector.Region> mTrackerObserver = mObjectTracker.processedOutput();
-    private boolean mPendingManualCapture = false;
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
@@ -81,8 +84,7 @@ public class CaptureFragment extends Fragment {
         mFotoapparat.start();
         configureObservers();
         configureCamera();
-        mCaptureEvents.onNext(true);
-        animate(R.layout.capture_fragment_capturing_off, 200, new LinearInterpolator());
+        animate(R.layout.capture_fragment_capturing_off, 400, new LinearInterpolator());
     }
 
     @Override
@@ -101,10 +103,13 @@ public class CaptureFragment extends Fragment {
     }
 
     private void configureObservers() {
+        PublishProcessor<Boolean> mCaptureCycle = PublishProcessor.create();
+
         mCompositeDisposable.add(
-                mCaptureEvents.switchMap(ignored -> {
+                mCaptureCycle.switchMap(ignored -> {
                     Timber.d("Observable chain reset.");
                     return mTrackerObserver
+                            .sample(200, TimeUnit.MILLISECONDS)
                             .observeOn(AndroidSchedulers.mainThread())
                             .timeInterval()
                             .scan(0L, (acc, current) -> {
@@ -121,30 +126,43 @@ public class CaptureFragment extends Fragment {
                                 }
                                 mCaptureFragmentBinding.featureOverlay.updateRegion(current.value());
                                 mCaptureFragmentBinding.featureOverlay.updateLockTime((float) acc / MAX_LOCK_TIME);
-                                mViewModel.captureState.setValue(current.value());
+                                mViewModel.captureState.setValue(current.value().state);
                                 return acc;
                             })
                             .filter(t -> t >= MAX_LOCK_TIME)
                             .withLatestFrom(mTrackerObserver.filter(r -> r.state == PageDetector.State.LOCKED), Pair::new)
-                            .filter( t -> mViewModel.captureMode.getValue() == CameraState.CaptureMode.AUTO)
+                            .filter(t -> mViewModel.captureMode.getValue() == CameraState.CaptureMode.AUTO)
                             .take(1)
                             .map(i -> {
-                                animate(R.layout.capture_fragment_capturing_on, 200, new LinearInterpolator());
+                                animate(R.layout.capture_fragment_capturing_on, 120, new LinearInterpolator());
+                                mViewModel.captureState.setValue(PageDetector.State.CAPTURE);
                                 return i;
                             })
                             .observeOn(Schedulers.computation())
                             .map(e -> {
-                                Photo photo = mFotoapparat.takePicture().toPendingResult().await();
-                                return mObjectTracker.processPhoto(photo, new PageDetector.Region(e.second), getContext());
+                                Bitmap bitmap = mFotoapparat.takePicture().toBitmap().await().bitmap;
+                                return mObjectTracker.processPhoto(bitmap, new PageDetector.Region(e.second));
                             })
                             .observeOn(AndroidSchedulers.mainThread());
 
                 }).subscribe(b -> {
-                    Toast.makeText(getContext(), "Image saved.", Toast.LENGTH_SHORT).show();
-                    animate(R.layout.capture_fragment_capturing_off, 200, new LinearInterpolator());
-                    mViewModel.currentPhoto.setValue(b);
-                    mCaptureEvents.onNext(true);
+                    mCapturedImages.onNext(b);
                 }));
+
+        mCompositeDisposable.add(
+                mCapturedImages
+                        .flatMapSingle(b -> mViewModel.imageManager.storeTempBitmap(b))
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe(s -> {
+                            Timber.d("Image saved to: " + s);
+                            Toast.makeText(getContext(), "Image saved to: " + s, Toast.LENGTH_SHORT).show();
+                            animate(R.layout.capture_fragment_capturing_off, 120, new LinearInterpolator());
+                            CaptureFragmentDirections.ConfirmAction action = CaptureFragmentDirections.confirmAction(s);
+                            NavHostFragment.findNavController(CaptureFragment.this).navigate(action);
+
+                            mCaptureCycle.onNext(true);
+                        }));
+        mCaptureCycle.onNext(true);
     }
 
     private void initializeCamera() {

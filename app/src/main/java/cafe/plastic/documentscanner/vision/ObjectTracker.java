@@ -24,11 +24,7 @@ public class ObjectTracker extends VisionFrameProcessor<PageDetector.Region> {
         return mFrames.map(this::processNative);
     }
 
-    public Bitmap processPhoto(Photo photo, PageDetector.Region region, Context context) {
-        byte[] photoBytes = photo.encodedImage;
-        BitmapFactory.Options options = new BitmapFactory.Options();
-        options.inPreferredConfig = Bitmap.Config.RGB_565;
-        Bitmap bitmap = BitmapFactory.decodeByteArray(photoBytes, 0, photoBytes.length, options);
+    public Bitmap processPhoto(Bitmap bitmap, PageDetector.Region region) {
         float scale =  (float)bitmap.getWidth() / region.frameSize.getWidth();
         Matrix matrix = new Matrix();
         region.roi.scale(scale);
@@ -49,9 +45,6 @@ public class ObjectTracker extends VisionFrameProcessor<PageDetector.Region> {
         mPageDetector.thresholdImage(processed);
         matrix.postRotate(-1*region.rotation);
         processed = Bitmap.createBitmap(processed, 0, 0, processed.getWidth(), processed.getHeight(), matrix, false);
-        String filename = "DocumentScanner" + System.currentTimeMillis() + ".jpg";
-        MediaStore.Images.Media.insertImage(context.getContentResolver(), processed, filename, "Image Scan");
-        Timber.d("Image saved");
         return processed;
     }
 

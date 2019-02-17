@@ -61,6 +61,7 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="@+id/capture_menu_anchor"
             app:layout_constraintVertical_bias="0.0"
+            app:captureText="@{@string/capture_text}"
             app:lockedText="@{@string/locked_text}"
             app:perspectiveText="@{@string/perspective_text}"
             app:searchingText="@{@string/searching_text}"

@@ -25,10 +25,12 @@ public class FeatureOverlay extends View {
     private final Quad mCurrentQuad;
     private int mDefaultSquareWidth;
     private float mLockProgress = 0;
+    private float mPreviousLockProgress = 0;
     private float mCrosshairSize;
     private Paint mStrokePaint;
     private Paint mFillPaint;
     private ValueAnimator mCurrentAnimation;
+    private ValueAnimator mLockProgressAnimation;
 
     public FeatureOverlay(Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
@@ -92,6 +94,7 @@ public class FeatureOverlay extends View {
             } else {
                 mCurrentQuad.lerp(mPriorQuad, mDefaultQuad, valueAnimator.getAnimatedFraction());
             }
+            invalidate();
         });
         mCurrentAnimation.start();
         invalidate();
@@ -99,7 +102,14 @@ public class FeatureOverlay extends View {
     }
 
     public void updateLockTime(float lockProgress) {
-        mLockProgress = lockProgress;
+        mPreviousLockProgress = mLockProgress;
+        if(mLockProgressAnimation != null) mLockProgressAnimation.cancel();
+        mLockProgressAnimation = ValueAnimator.ofFloat(mPreviousLockProgress, lockProgress).setDuration(120);
+        mLockProgressAnimation.addUpdateListener(valueAnimator -> {
+            mLockProgress = (float)valueAnimator.getAnimatedValue();
+            invalidate();
+        });
+        mLockProgressAnimation.start();
         invalidate();
     }
 
