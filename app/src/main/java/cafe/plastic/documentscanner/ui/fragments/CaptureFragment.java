@@ -24,6 +24,7 @@ import android.view.ViewGroup;
 import android.view.animation.LinearInterpolator;
 import android.widget.Toast;
 
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import androidx.transition.TransitionManager;
@@ -40,6 +41,7 @@ import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.processors.PublishProcessor;
 import io.reactivex.schedulers.Schedulers;
+import io.reactivex.schedulers.Timed;
 import timber.log.Timber;
 
 public class CaptureFragment extends Fragment {
@@ -63,25 +65,14 @@ public class CaptureFragment extends Fragment {
     @Override
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-        viewModel = ViewModelProviders.of(requireActivity()).get(CaptureViewModel.class);
-        viewModel.flashMode.observe(this, f -> configureCamera());
-        viewModel.captureMode.observe(this, o -> configureCamera());
-        binding.setHandlers(new Handlers());
-        binding.setViewmodel(viewModel);
-        binding.setLifecycleOwner(this);
-        requestPermissions(new String[]{Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE}, 0);
-        initializeCamera();
+        initialize();
     }
 
     @Override
     public void onResume() {
         super.onResume();
         Timber.d("onResume");
-        initializeCamera();
-        fotoapparat.start();
-        configureObservers();
-        configureCamera();
-        animate(R.layout.capture_fragment_capturing_off, 0, new LinearInterpolator());
+        initializeResume();
     }
 
     @Override
@@ -89,7 +80,7 @@ public class CaptureFragment extends Fragment {
         super.onPause();
         Timber.d("onPause");
         fotoapparat.stop();
-        observers.clear();
+        cancelObservers();
     }
 
     @Override
@@ -99,63 +90,19 @@ public class CaptureFragment extends Fragment {
         pageTracker.close();
     }
 
-    private void configureObservers() {
+    private void initialize() {
+        viewModel = ViewModelProviders.of(requireActivity()).get(CaptureViewModel.class);
+        viewModel.flashMode.observe(this, f -> configureCamera());
+        viewModel.captureMode.observe(this, o -> configureCamera());
+        binding.setViewmodel(viewModel);
+        binding.setLifecycleOwner(this);
+        requestPermissions(new String[]{Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE}, 0);
+    }
 
-        observers.add(
-                detectionEvents
-                        .sample(200, TimeUnit.MILLISECONDS)
-                        .observeOn(AndroidSchedulers.mainThread())
-                        .timeInterval()
-                        .scan(0L, (acc, current) -> {
-                            if (current.value().state == PageDetector.State.LOCKED) {
-                                acc += current.time();
-                                if (acc > MAX_LOCK_TIME) {
-                                    acc = MAX_LOCK_TIME;
-                                }
-                            } else {
-                                if (acc < current.time())
-                                    acc = 0L;
-                                else
-                                    acc -= current.time();
-                            }
-                            binding.featureOverlay.updateRegion(current.value());
-                            binding.featureOverlay.updateLockTime((float) acc / MAX_LOCK_TIME);
-                            viewModel.captureState.setValue(current.value().state);
-                            return acc;
-                        })
-                        .filter(t -> t >= MAX_LOCK_TIME)
-                        .withLatestFrom(detectionEvents.filter(r -> r.state == PageDetector.State.LOCKED), Pair::new)
-                        .filter(t -> viewModel.captureMode.getValue() == CameraState.CaptureMode.AUTO)
-                        .take(1)
-                        .map(i -> {
-                            animate(R.layout.capture_fragment_capturing_on, 120, new LinearInterpolator());
-                            viewModel.captureState.setValue(PageDetector.State.CAPTURE);
-                            return i;
-                        })
-                        .observeOn(Schedulers.computation())
-                        .map(e -> {
-                            Bitmap bitmap = fotoapparat.takePicture().toBitmap().await().bitmap;
-                            return pageTracker.processPhoto(bitmap, new PageDetector.Region(e.second));
-                        })
-                        .observeOn(AndroidSchedulers.mainThread())
-                        .subscribe(b -> {
-                            captureEvents.onNext(b);
-                        }));
-
-        observers.add(
-                captureEvents
-                        .observeOn(Schedulers.io())
-                        .map(b -> {
-                            Timber.d("Current thread: " + Thread.currentThread().getName());
-                            return viewModel.imageManager.storeTempBitmap(b);
-                        })
-                        .observeOn(AndroidSchedulers.mainThread())
-                        .subscribe(s -> {
-                            Timber.d("Image saved to: " + s);
-                            Toast.makeText(getContext(), "Image saved to: " + s, Toast.LENGTH_SHORT).show();
-                            CaptureFragmentDirections.ConfirmAction action = CaptureFragmentDirections.confirmAction(s);
-                            NavHostFragment.findNavController(CaptureFragment.this).navigate(action);
-                        }));
+    private void initializeResume() {
+        initializeCamera();
+        configureObservers();
+        hideLoadingUI();
     }
 
     private void initializeCamera() {
@@ -166,6 +113,8 @@ public class CaptureFragment extends Fragment {
                 .previewScaleType(ScaleType.CenterCrop)
                 .frameProcessor(pageTracker)
                 .build();
+        fotoapparat.start();
+        configureCamera();
     }
 
     private void configureCamera() {
@@ -182,6 +131,84 @@ public class CaptureFragment extends Fragment {
         }
         fotoapparat.updateConfiguration(builder.build());
     }
+
+    private void configureObservers() {
+
+        observers.add(
+                configureDetectionObserver().subscribe(captureEvents::onNext));
+
+        observers.add(
+                configureCaptureObserver()
+                        .subscribe(s -> {
+                            CaptureFragmentDirections.ConfirmAction action = CaptureFragmentDirections.confirmAction(s);
+                            NavHostFragment.findNavController(CaptureFragment.this).navigate(action);
+                        }));
+    }
+
+    private void cancelObservers() {
+        observers.clear();
+    }
+
+    private Flowable<Bitmap> configureDetectionObserver() {
+        return detectionEvents
+                .sample(200, TimeUnit.MILLISECONDS)
+                .observeOn(AndroidSchedulers.mainThread())
+                .timeInterval()
+                .scan(0L, this::calculateLockTime)
+                .filter(t -> t >= MAX_LOCK_TIME)
+                .withLatestFrom(detectionEvents.filter(r -> r.state == PageDetector.State.LOCKED), Pair::new)
+                .filter(t -> viewModel.captureMode.getValue() == CameraState.CaptureMode.AUTO)
+                .take(1)
+                .doOnNext((i) -> showCaptureUI())
+                .observeOn(Schedulers.computation())
+                .map(e -> capture(e.second))
+                .observeOn(AndroidSchedulers.mainThread());
+    }
+
+    private Flowable<String> configureCaptureObserver() {
+        return captureEvents.observeOn(Schedulers.io())
+                .map(viewModel.imageManager::storeTempBitmap)
+                .observeOn(AndroidSchedulers.mainThread())
+                .doOnNext((s) -> {
+                    Timber.d("Image saved to: %s", s);
+                    Toast.makeText(getContext(), "Image saved to: " + s, Toast.LENGTH_SHORT).show();
+                });
+    }
+
+    private Bitmap capture(PageDetector.Region region) throws ExecutionException, InterruptedException {
+        Bitmap bitmap = fotoapparat.takePicture().toBitmap().await().bitmap;
+        return pageTracker.processPhoto(bitmap, new PageDetector.Region(region));
+    }
+
+    private void showCaptureUI() {
+        animate(R.layout.capture_fragment_capturing_on, 120, new LinearInterpolator());
+        viewModel.captureState.setValue(PageDetector.State.CAPTURE);
+    }
+
+    private void hideLoadingUI() {
+        animate(R.layout.capture_fragment_capturing_off, 120, new LinearInterpolator());
+    }
+
+    private Long calculateLockTime(Long accumulator, Timed<PageDetector.Region> currentTime) {
+        if (currentTime.value().state == PageDetector.State.LOCKED) {
+            accumulator += currentTime.time();
+            if (accumulator > MAX_LOCK_TIME) {
+                accumulator = MAX_LOCK_TIME;
+            }
+        } else {
+            if (accumulator < currentTime.time())
+                accumulator = 0L;
+            else
+                accumulator -= currentTime.time();
+        }
+        binding.featureOverlay.updateRegion(currentTime.value());
+        binding.featureOverlay.updateLockTime((float) accumulator / MAX_LOCK_TIME);
+        viewModel.captureState.setValue(currentTime.value().state);
+        return accumulator;
+    }
+
+
+
 
     private void animate(int targetLayout, int time, TimeInterpolator interpolator) {
         ConstraintSet target = new ConstraintSet();
