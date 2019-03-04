@@ -1,14 +1,10 @@
-package cafe.plastic.documentscanner.vision;
+package cafe.plastic.pagedetect;
 
 import android.graphics.Bitmap;
-import android.graphics.Point;
 import android.util.Size;
 
 import java.util.ArrayList;
-import java.util.List;
 
-import cafe.plastic.documentscanner.util.Quad;
-import cafe.plastic.documentscanner.util.Vec2;
 
 public class PageDetector {
     private boolean mReleased = false;
@@ -55,11 +51,11 @@ public class PageDetector {
             this.rotation = region.rotation;
         }
     }
-    PageDetector() {
+    public PageDetector() {
         mHandle = Create();
     }
 
-    Region detect(byte[] frame, int width, int height, int rotation) {
+    public Region detect(byte[] frame, int width, int height, int rotation) {
         if(mReleased)
             throw new IllegalStateException("Detector has been released");
         ArrayList<Vec2> roiPoints = GetRoi(frame, width, height);
@@ -77,13 +73,13 @@ public class PageDetector {
         return new Region(state, roi, new Size(width, height), rotation);
     }
 
-    void release() {
+    public void release() {
         if(!mReleased)
             Release();
         mReleased = true;
     }
 
-    void thresholdImage(Bitmap input) {
+    public void thresholdImage(Bitmap input) {
         ThresholdImage(input);
     }
 

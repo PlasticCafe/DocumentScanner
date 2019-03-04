@@ -3,7 +3,6 @@ package cafe.plastic.documentscanner.ui.fragments;
 import android.Manifest;
 
 import androidx.constraintlayout.widget.ConstraintSet;
-import androidx.databinding.DataBindingUtil;
 import androidx.lifecycle.ViewModelProviders;
 
 import android.animation.TimeInterpolator;
@@ -31,7 +30,7 @@ import androidx.transition.TransitionManager;
 import cafe.plastic.documentscanner.R;
 import cafe.plastic.documentscanner.databinding.CaptureFragmentBinding;
 import cafe.plastic.documentscanner.vision.ObjectTracker;
-import cafe.plastic.documentscanner.vision.PageDetector;
+import cafe.plastic.pagedetect.PageDetector;
 import io.fotoapparat.Fotoapparat;
 import io.fotoapparat.configuration.CameraConfiguration;
 import io.fotoapparat.parameter.ScaleType;
@@ -45,31 +44,31 @@ import timber.log.Timber;
 
 public class CaptureFragment extends Fragment {
     private static final long MAX_LOCK_TIME = 2300;
-    private CaptureViewModel mViewModel;
-    private Fotoapparat mFotoapparat;
-    private CaptureFragmentBinding mCaptureFragmentBinding;
-    private final ObjectTracker mObjectTracker = new ObjectTracker();
-    private final CompositeDisposable mCompositeDisposable = new CompositeDisposable();
-    private final PublishProcessor<Bitmap> mCapturedImages = PublishProcessor.create();
-    private final Flowable<PageDetector.Region> mTrackerObserver = mObjectTracker.processedOutput();
+    private CaptureViewModel viewModel;
+    private Fotoapparat fotoapparat;
+    private CaptureFragmentBinding binding;
+    private final ObjectTracker pageTracker = new ObjectTracker();
+    private final CompositeDisposable observers = new CompositeDisposable();
+    private final PublishProcessor<Bitmap> captureEvents = PublishProcessor.create();
+    private final Flowable<PageDetector.Region> detectionEvents = pageTracker.processedOutput();
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        mCaptureFragmentBinding = CaptureFragmentBinding.inflate(inflater, container, false);
-        mCaptureFragmentBinding.setHandlers(new Handlers());
-        return mCaptureFragmentBinding.getRoot();
+        binding = CaptureFragmentBinding.inflate(inflater, container, false);
+        binding.setHandlers(new Handlers());
+        return binding.getRoot();
     }
 
     @Override
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-        mViewModel = ViewModelProviders.of(requireActivity()).get(CaptureViewModel.class);
-        mViewModel.flashMode.observe(this, f -> configureCamera());
-        mViewModel.captureMode.observe(this, o -> configureCamera());
-        mCaptureFragmentBinding.setHandlers(new Handlers());
-        mCaptureFragmentBinding.setViewmodel(mViewModel);
-        mCaptureFragmentBinding.setLifecycleOwner(this);
+        viewModel = ViewModelProviders.of(requireActivity()).get(CaptureViewModel.class);
+        viewModel.flashMode.observe(this, f -> configureCamera());
+        viewModel.captureMode.observe(this, o -> configureCamera());
+        binding.setHandlers(new Handlers());
+        binding.setViewmodel(viewModel);
+        binding.setLifecycleOwner(this);
         requestPermissions(new String[]{Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE}, 0);
         initializeCamera();
     }
@@ -79,7 +78,7 @@ public class CaptureFragment extends Fragment {
         super.onResume();
         Timber.d("onResume");
         initializeCamera();
-        mFotoapparat.start();
+        fotoapparat.start();
         configureObservers();
         configureCamera();
         animate(R.layout.capture_fragment_capturing_off, 0, new LinearInterpolator());
@@ -89,21 +88,21 @@ public class CaptureFragment extends Fragment {
     public void onPause() {
         super.onPause();
         Timber.d("onPause");
-        mFotoapparat.stop();
-        mCompositeDisposable.clear();
+        fotoapparat.stop();
+        observers.clear();
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
         Timber.d("onDestroy");
-        mObjectTracker.close();
+        pageTracker.close();
     }
 
     private void configureObservers() {
 
-        mCompositeDisposable.add(
-                mTrackerObserver
+        observers.add(
+                detectionEvents
                         .sample(200, TimeUnit.MILLISECONDS)
                         .observeOn(AndroidSchedulers.mainThread())
                         .timeInterval()
@@ -119,36 +118,36 @@ public class CaptureFragment extends Fragment {
                                 else
                                     acc -= current.time();
                             }
-                            mCaptureFragmentBinding.featureOverlay.updateRegion(current.value());
-                            mCaptureFragmentBinding.featureOverlay.updateLockTime((float) acc / MAX_LOCK_TIME);
-                            mViewModel.captureState.setValue(current.value().state);
+                            binding.featureOverlay.updateRegion(current.value());
+                            binding.featureOverlay.updateLockTime((float) acc / MAX_LOCK_TIME);
+                            viewModel.captureState.setValue(current.value().state);
                             return acc;
                         })
                         .filter(t -> t >= MAX_LOCK_TIME)
-                        .withLatestFrom(mTrackerObserver.filter(r -> r.state == PageDetector.State.LOCKED), Pair::new)
-                        .filter(t -> mViewModel.captureMode.getValue() == CameraState.CaptureMode.AUTO)
+                        .withLatestFrom(detectionEvents.filter(r -> r.state == PageDetector.State.LOCKED), Pair::new)
+                        .filter(t -> viewModel.captureMode.getValue() == CameraState.CaptureMode.AUTO)
                         .take(1)
                         .map(i -> {
                             animate(R.layout.capture_fragment_capturing_on, 120, new LinearInterpolator());
-                            mViewModel.captureState.setValue(PageDetector.State.CAPTURE);
+                            viewModel.captureState.setValue(PageDetector.State.CAPTURE);
                             return i;
                         })
                         .observeOn(Schedulers.computation())
                         .map(e -> {
-                            Bitmap bitmap = mFotoapparat.takePicture().toBitmap().await().bitmap;
-                            return mObjectTracker.processPhoto(bitmap, new PageDetector.Region(e.second));
+                            Bitmap bitmap = fotoapparat.takePicture().toBitmap().await().bitmap;
+                            return pageTracker.processPhoto(bitmap, new PageDetector.Region(e.second));
                         })
                         .observeOn(AndroidSchedulers.mainThread())
                         .subscribe(b -> {
-                            mCapturedImages.onNext(b);
+                            captureEvents.onNext(b);
                         }));
 
-        mCompositeDisposable.add(
-                mCapturedImages
+        observers.add(
+                captureEvents
                         .observeOn(Schedulers.io())
                         .map(b -> {
                             Timber.d("Current thread: " + Thread.currentThread().getName());
-                            return mViewModel.imageManager.storeTempBitmap(b);
+                            return viewModel.imageManager.storeTempBitmap(b);
                         })
                         .observeOn(AndroidSchedulers.mainThread())
                         .subscribe(s -> {
@@ -160,18 +159,18 @@ public class CaptureFragment extends Fragment {
     }
 
     private void initializeCamera() {
-        mFotoapparat = Fotoapparat.with(requireActivity())
-                .into(mCaptureFragmentBinding.cameraView
+        fotoapparat = Fotoapparat.with(requireActivity())
+                .into(binding.cameraView
                 )
-                .focusView(mCaptureFragmentBinding.focusView)
+                .focusView(binding.focusView)
                 .previewScaleType(ScaleType.CenterCrop)
-                .frameProcessor(mObjectTracker)
+                .frameProcessor(pageTracker)
                 .build();
     }
 
     private void configureCamera() {
         CameraConfiguration.Builder builder = new CameraConfiguration.Builder();
-        switch (mViewModel.flashMode.getValue()) {
+        switch (viewModel.flashMode.getValue()) {
             case OFF:
                 builder.flash(FlashSelectorsKt.off());
                 break;
@@ -181,7 +180,7 @@ public class CaptureFragment extends Fragment {
             default:
                 builder.flash(FlashSelectorsKt.off());
         }
-        mFotoapparat.updateConfiguration(builder.build());
+        fotoapparat.updateConfiguration(builder.build());
     }
 
     private void animate(int targetLayout, int time, TimeInterpolator interpolator) {
@@ -190,31 +189,31 @@ public class CaptureFragment extends Fragment {
         target.clone(getActivity(), targetLayout);
         transition.setInterpolator(interpolator);
         transition.setDuration(time);
-        TransitionManager.beginDelayedTransition(mCaptureFragmentBinding.constraintLayout, transition);
-        target.applyTo(mCaptureFragmentBinding.constraintLayout);
+        TransitionManager.beginDelayedTransition(binding.constraintLayout, transition);
+        target.applyTo(binding.constraintLayout);
     }
 
     public class Handlers {
 
         public void onFlashButtonClicked(View view) {
-            CameraState.FlashMode flash = mViewModel.flashMode.getValue();
+            CameraState.FlashMode flash = viewModel.flashMode.getValue();
             if (flash == CameraState.FlashMode.ON) {
                 flash = CameraState.FlashMode.OFF;
             } else {
                 flash = CameraState.FlashMode.ON;
             }
-            mViewModel.flashMode.setValue(flash);
+            viewModel.flashMode.setValue(flash);
         }
 
         public void onCaptureModeButtonClicked(View view) {
-            CameraState.CaptureMode outline = mViewModel.captureMode.getValue();
+            CameraState.CaptureMode outline = viewModel.captureMode.getValue();
             if (outline == CameraState.CaptureMode.AUTO) {
                 outline = CameraState.CaptureMode.MANUAL;
 
             } else {
                 outline = CameraState.CaptureMode.AUTO;
             }
-            mViewModel.captureMode.setValue(outline);
+            viewModel.captureMode.setValue(outline);
         }
     }
 }

@@ -6,7 +6,7 @@ import android.widget.TextView;
 
 import androidx.databinding.BindingAdapter;
 import cafe.plastic.documentscanner.ui.fragments.CameraState;
-import cafe.plastic.documentscanner.vision.PageDetector;
+import cafe.plastic.pagedetect.PageDetector;
 
 public class Bindings {
     @BindingAdapter({"flashMode", "flashOnIcon", "flashOffIcon"})

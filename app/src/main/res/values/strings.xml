@@ -15,4 +15,6 @@
     <string name="locked_text">HOLD STILL...</string>
     <string name="capture_text">CAPTURING...</string>
     <string name="toggle_cap_button_desc">Toggle automatic capture</string>
+    <string name="brightness_text">Brightness</string>
+    <string name="contrast_text">Contrast</string>
 </resources>

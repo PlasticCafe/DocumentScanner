@@ -1,4 +1,4 @@
-package cafe.plastic.documentscanner.util;
+package cafe.plastic.pagedetect;
 
 public class Vec2 {
     private float x, y;

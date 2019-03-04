@@ -1,21 +1,14 @@
 package cafe.plastic.documentscanner.vision;
 
-import android.content.Context;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Matrix;
 import android.graphics.Paint;
-import android.graphics.Point;
-import android.provider.MediaStore;
 
-import cafe.plastic.documentscanner.util.Quad;
-import cafe.plastic.documentscanner.util.Vec2;
+import cafe.plastic.pagedetect.PageDetector;
+import cafe.plastic.pagedetect.Vec2;
 import io.fotoapparat.preview.Frame;
-import io.fotoapparat.result.Photo;
 import io.reactivex.Flowable;
-import io.reactivex.flowables.ConnectableFlowable;
-import timber.log.Timber;
 
 public class ObjectTracker extends VisionFrameProcessor<PageDetector.Region> {
     private final PageDetector mPageDetector = new PageDetector();

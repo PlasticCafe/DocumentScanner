@@ -14,9 +14,9 @@ import java.util.ArrayList;
 
 import androidx.annotation.Nullable;
 import cafe.plastic.documentscanner.R;
-import cafe.plastic.documentscanner.util.Quad;
-import cafe.plastic.documentscanner.util.Vec2;
-import cafe.plastic.documentscanner.vision.PageDetector;
+import cafe.plastic.pagedetect.PageDetector;
+import cafe.plastic.pagedetect.Quad;
+import cafe.plastic.pagedetect.Vec2;
 
 public class FeatureOverlay extends View {
     private PageDetector.Region mLastestRegion;

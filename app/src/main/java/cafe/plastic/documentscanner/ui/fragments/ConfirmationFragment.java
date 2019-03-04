@@ -48,6 +48,7 @@ public class ConfirmationFragment extends Fragment {
         imageLocation = ConfirmationFragmentArgs.fromBundle(getArguments()).getImageFileName();
         takenPicture = view.findViewById(R.id.takenPicture);
 
+
     }
 
     @Override
@@ -55,27 +56,26 @@ public class ConfirmationFragment extends Fragment {
         super.onActivityCreated(savedInstanceState);
         image = Single
                 .<Bitmap>create(s -> {
-                    s.onSuccess(TempImageManager.getInstance(getContext()).loadTempBitmap(imageLocation));
-                    Timber.d("Loading image from disk");
+                    try {
+                        s.onSuccess(TempImageManager.getInstance(getContext()).loadTempBitmap(imageLocation));
+                    } catch(Exception e) {
+                        s.onError(e);
+                    }
                 })
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .cache();
-
     }
 
     @Override
     public void onResume() {
         super.onResume();
         observers.add(
-                image.subscribe(b ->
-                                takenPicture.setImageBitmap(b),
+                image.subscribe(
+                        b -> takenPicture.setImageBitmap(b),
                         e -> {
-                            Timber.d("Failed to load image, returning");
                             NavHostFragment.findNavController(this).popBackStack();
-                        }
-                )
-        );
+                        }));
     }
 
     @Override

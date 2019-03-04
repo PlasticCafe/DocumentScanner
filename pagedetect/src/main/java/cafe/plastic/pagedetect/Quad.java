@@ -1,7 +1,6 @@
-package cafe.plastic.documentscanner.util;
+package cafe.plastic.pagedetect;
 
 import android.graphics.Path;
-import android.graphics.Point;
 
 import java.util.ArrayList;
 

@@ -8,7 +8,7 @@ import androidx.lifecycle.LifecycleObserver;
 import androidx.lifecycle.MutableLiveData;
 import cafe.plastic.documentscanner.ui.data.SafeLiveData;
 import cafe.plastic.documentscanner.util.TempImageManager;
-import cafe.plastic.documentscanner.vision.PageDetector;
+import cafe.plastic.pagedetect.PageDetector;
 
 public class CaptureViewModel extends AndroidViewModel implements LifecycleObserver {
 

@@ -13,30 +13,16 @@ android {
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-        externalNativeBuild {
-            cmake {
-                cppFlags "-std=c++11 -frtti -fexceptions"
-                abiFilters 'x86', 'x86_64', 'armeabi-v7a', 'arm64-v8a'
-                arguments "-DOPENCV_SDK=$OPENCV_SDK", "-DANDROID_TOOLCHAIN=gcc", "-DANDROID_STL=gnustl_static"
-            }
-        }
+
     }
-    sourceSets {
-        main {
-            jniLibs.srcDirs = ["$OPENCV_SDK/native/libs/"]
-        }
-    }
+
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
-    externalNativeBuild {
-        cmake {
-            path "CMakeLists.txt"
-        }
-    }
+
     compileOptions {
         sourceCompatibility = '1.8'
         targetCompatibility = '1.8'
@@ -57,6 +43,8 @@ dependencies {
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
     implementation 'com.github.chrisbanes:PhotoView:2.2.0'
     implementation 'com.jakewharton.timber:timber:4.7.1'
+    implementation project(':pagedetect')
     androidTestImplementation 'androidx.test:runner:1.1.1'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.1.1'
+
 }
