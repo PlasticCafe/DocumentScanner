@@ -30,7 +30,6 @@ namespace scanner {
 
         double distortion(std::vector<cv::Point> &points);
 
-        void threshold(cv::Mat &frameInput);
 
     private:
         float scale;

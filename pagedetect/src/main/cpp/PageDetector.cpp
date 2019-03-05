@@ -175,16 +175,4 @@ namespace scanner {
         }
         return largestContour;
     }
-
-    void PageDetector::threshold(cv::Mat &frameInput) {
-        int frameScale = getMatScale(frameInput);
-        cv::Mat tmp;
-        cv::cvtColor(frameInput, tmp, cv::COLOR_BGR2GRAY);
-        cv::GaussianBlur(tmp, tmp, cv::Size(frameScale / 200 | 1, frameScale / 200 | 1), 0);
-        cv::adaptiveThreshold(tmp, tmp, 255, cv::ADAPTIVE_THRESH_MEAN_C, cv::THRESH_BINARY,
-                              frameScale / 238 | 1, 2);
-        //cv::Mat element = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3), cv::Point(-1, -1));
-        //cv::morphologyEx(tmp, tmp, cv::MORPH_CLOSE, element);
-        cv::cvtColor(tmp, frameInput, cv::COLOR_GRAY2BGR);
-    }
 }

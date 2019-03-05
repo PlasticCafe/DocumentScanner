@@ -22,7 +22,7 @@ public class ObjectTracker extends VisionFrameProcessor<PageDetector.Region> {
         Matrix matrix = new Matrix();
         region.roi.scale(scale);
         Vec2 dims = region.roi.getDimensions();
-        Bitmap processed = Bitmap.createBitmap((int)dims.getX(), (int)dims.getY(), Bitmap.Config.RGB_565);
+        Bitmap processed = Bitmap.createBitmap((int)dims.getX(), (int)dims.getY(), Bitmap.Config.ARGB_8888);
         Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
         Canvas c = new Canvas(processed);
         Matrix warp = new Matrix();

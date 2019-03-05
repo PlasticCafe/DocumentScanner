@@ -3,6 +3,16 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <data>
+
+        <variable
+            name="handlers"
+            type="cafe.plastic.documentscanner.ui.fragments.ConfirmationFragment.Handlers" />
+        <variable
+            name="viewmodel"
+            type="cafe.plastic.documentscanner.ui.fragments.ConfirmationViewModel"/>
+    </data>
+
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/constraintLayout"
         android:layout_width="match_parent"
@@ -12,28 +22,26 @@
 
         <!-- TODO: Update blank fragment layout -->
 
-        <com.github.chrisbanes.photoview.PhotoView
-            android:id="@+id/takenPicture"
+        <ImageView
+            android:id="@+id/image"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            android:src="@android:drawable/progress_indeterminate_horizontal"
-            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintBottom_toTopOf="@+id/sliders_background"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintHorizontal_bias="0.0"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintVertical_bias="0.0" />
+            app:srcCompat="@android:drawable/btn_dialog" />
 
         <View
-            android:id="@+id/view2"
+            android:id="@+id/sliders_background"
             android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:alpha="0.95"
+            android:layout_height="200dp"
+            android:alpha="1"
             android:background="@color/colorPrimaryDark"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="@+id/brightness_text" />
+            app:layout_constraintHorizontal_bias="0.0"
+            app:layout_constraintStart_toStartOf="parent" />
 
         <TextView
             android:id="@+id/brightness_text"
@@ -42,8 +50,9 @@
             android:layout_marginStart="16dp"
             android:paddingTop="16dp"
             android:text="@string/brightness_text"
+            android:textColor="@android:color/white"
             app:layout_constraintBottom_toTopOf="@+id/brightness_slider"
-            app:layout_constraintStart_toStartOf="@+id/view2"
+            app:layout_constraintStart_toStartOf="@+id/sliders_background"
             tools:text="Brightness" />
 
         <SeekBar
@@ -53,9 +62,10 @@
             android:layout_marginStart="16dp"
             android:layout_marginEnd="16dp"
             android:layout_marginBottom="16dp"
+            android:progress="@={viewmodel.brightness}"
             app:layout_constraintBottom_toTopOf="@+id/contrast_text"
-            app:layout_constraintEnd_toEndOf="@+id/view2"
-            app:layout_constraintStart_toStartOf="@+id/view2" />
+            app:layout_constraintEnd_toEndOf="@+id/sliders_background"
+            app:layout_constraintStart_toStartOf="@+id/sliders_background" />
 
         <TextView
             android:id="@+id/contrast_text"
@@ -64,8 +74,9 @@
             android:layout_marginStart="16dp"
             android:layout_marginBottom="16dp"
             android:text="@string/contrast_text"
+            android:textColor="@android:color/white"
             app:layout_constraintBottom_toTopOf="@+id/contrast_slider"
-            app:layout_constraintStart_toStartOf="@+id/view2"
+            app:layout_constraintStart_toStartOf="@+id/sliders_background"
             tools:text="Contrast" />
 
         <SeekBar
@@ -74,12 +85,23 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
             android:layout_marginEnd="16dp"
-            android:layout_marginBottom="16dp"
+            android:layout_marginBottom="8dp"
             android:paddingBottom="16dp"
-            app:layout_constraintBottom_toBottomOf="@+id/view2"
-            app:layout_constraintEnd_toEndOf="@+id/view2"
-            app:layout_constraintHorizontal_bias="0.0"
-            app:layout_constraintStart_toStartOf="@+id/view2" />
+            android:progress="@={viewmodel.contrast}"
+            app:layout_constraintBottom_toTopOf="@+id/toggle_fax"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <ImageButton
+            android:id="@+id/toggle_fax"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginBottom="8dp"
+            android:onClickListener="@{handlers.toggleFax}"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:srcCompat="@drawable/ic_info" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </layout>

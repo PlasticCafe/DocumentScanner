@@ -7,7 +7,7 @@
 
 #include <opencv2/core/mat.hpp>
 namespace scanner {
-    void contrast(cv::Mat& input, cv::Mat& output, float contrast);
-    void brightness(cv::Mat& intput, cv::Mat& output, float brightness);
+    void brightnessAndContrast(cv::Mat input, cv::Mat output, float brightness, float contrast);
+    void threshold(cv::Mat input, cv::Mat output);
 }
 #endif //DOCUMENTSCANNER_POSTPROCESS_H

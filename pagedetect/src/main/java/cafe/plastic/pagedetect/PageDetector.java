@@ -17,7 +17,6 @@ public class PageDetector {
     private native ArrayList<Vec2> GetRoi(byte[] frame, int width, int height);
     private native float GetArea(ArrayList<Vec2> vecs);
     private native float GetDistortion(ArrayList<Vec2> vecs);
-    private native void ThresholdImage(Bitmap input);
     public enum State {
         CAPTURE,
         LOCKED,
@@ -77,10 +76,6 @@ public class PageDetector {
         if(!mReleased)
             Release();
         mReleased = true;
-    }
-
-    public void thresholdImage(Bitmap input) {
-        ThresholdImage(input);
     }
 
     private boolean distorted(Quad roi) {
