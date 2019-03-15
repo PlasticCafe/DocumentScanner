@@ -33,6 +33,12 @@ import timber.log.Timber;
 @SuppressWarnings("WeakerAccess")
 public class ConfirmationFragment extends Fragment {
 
+    public static String PREF_WORKING_IMAGE = "pref_working_image";
+    public static String PREF_IMAGE_BRIGHTNESS = "pref_image_brightness";
+    public static String PREF_IMAGE_CONTRAST = "pref_image_contrast";
+    public static String PREF_IMAGE_BOUNDS = "pref_image_bounds";
+    public static String PREF_IMAGE_ROTATION = "pref_image_rotation";
+
     private String imageLocation;
     private Single<Bitmap> imageLoader;
     private Bitmap originalImage;
@@ -43,13 +49,15 @@ public class ConfirmationFragment extends Fragment {
     private ConfirmationFragmentBinding binding;
     private ConfirmationViewModel viewModel;
     private PublishProcessor<Boolean> renderEvents;
-    CompositeDisposable observers = new CompositeDisposable();
+    private CompositeDisposable observers = new CompositeDisposable();
 
     public ConfirmationFragment() {
         imageLoader = Single
                 .<Bitmap>create(s -> {
                     try {
-                        s.onSuccess(TempImageManager.getInstance(getContext()).loadTempBitmap(imageLocation));
+                        TempImageManager.getInstance(getContext()).clearAllExcept(imageLocation);
+                        Bitmap bitmap = TempImageManager.getInstance(getContext()).loadTempBitmap(imageLocation);
+                        s.onSuccess(bitmap);
                     } catch (Exception e) {
                         s.onError(e);
                     }
@@ -81,8 +89,6 @@ public class ConfirmationFragment extends Fragment {
     public void onAttach(Context context) {
         super.onAttach(context);
         viewModel = ViewModelProviders.of(requireActivity()).get(ConfirmationViewModel.class);
-        viewModel.brightness.setValue(50);
-        viewModel.contrast.setValue(0);
         viewModel.brightness.observe(this, i -> render());
         viewModel.contrast.observe(this, i -> render());
     }
@@ -152,6 +158,10 @@ public class ConfirmationFragment extends Fragment {
                         e -> {
                             NavHostFragment.findNavController(this).popBackStack();
                         }));
+    }
+
+    private void storePreferences() {
+
     }
 
     public class Handlers {

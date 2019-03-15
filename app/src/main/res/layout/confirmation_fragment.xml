@@ -99,9 +99,10 @@
             android:layout_marginStart="16dp"
             android:layout_marginBottom="8dp"
             android:onClickListener="@{handlers.toggleFax}"
+            android:tint="@android:color/darker_gray"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:srcCompat="@drawable/ic_info" />
+            app:srcCompat="@drawable/ic_threshold_on" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </layout>

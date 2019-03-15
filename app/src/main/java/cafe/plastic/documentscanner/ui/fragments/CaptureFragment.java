@@ -51,7 +51,6 @@ public class CaptureFragment extends Fragment {
     private CaptureFragmentBinding binding;
     private final ObjectTracker pageTracker = new ObjectTracker();
     private final CompositeDisposable observers = new CompositeDisposable();
-    private final PublishProcessor<Bitmap> captureEvents = PublishProcessor.create();
     private final Flowable<PageDetector.Region> detectionEvents = pageTracker.processedOutput();
 
     @Override
@@ -133,12 +132,8 @@ public class CaptureFragment extends Fragment {
     }
 
     private void configureObservers() {
-
         observers.add(
-                configureDetectionObserver().subscribe(captureEvents::onNext));
-
-        observers.add(
-                configureCaptureObserver()
+                configureDetectionObserver()
                         .subscribe(s -> {
                             CaptureFragmentDirections.ConfirmAction action = CaptureFragmentDirections.confirmAction(s);
                             NavHostFragment.findNavController(CaptureFragment.this).navigate(action);
@@ -149,7 +144,7 @@ public class CaptureFragment extends Fragment {
         observers.clear();
     }
 
-    private Flowable<Bitmap> configureDetectionObserver() {
+    private Flowable<String> configureDetectionObserver() {
         return detectionEvents
                 .sample(200, TimeUnit.MILLISECONDS)
                 .observeOn(AndroidSchedulers.mainThread())
@@ -162,11 +157,7 @@ public class CaptureFragment extends Fragment {
                 .doOnNext((i) -> showCaptureUI())
                 .observeOn(Schedulers.computation())
                 .map(e -> capture(e.second))
-                .observeOn(AndroidSchedulers.mainThread());
-    }
-
-    private Flowable<String> configureCaptureObserver() {
-        return captureEvents.observeOn(Schedulers.io())
+                .observeOn(Schedulers.io())
                 .map(viewModel.imageManager::storeTempBitmap)
                 .observeOn(AndroidSchedulers.mainThread())
                 .doOnNext((s) -> {
@@ -177,6 +168,7 @@ public class CaptureFragment extends Fragment {
 
     private Bitmap capture(PageDetector.Region region) throws ExecutionException, InterruptedException {
         Bitmap bitmap = fotoapparat.takePicture().toBitmap().await().bitmap;
+        
         return pageTracker.processPhoto(bitmap, new PageDetector.Region(region));
     }
 
