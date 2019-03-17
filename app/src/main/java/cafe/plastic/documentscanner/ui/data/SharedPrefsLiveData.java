@@ -2,6 +2,7 @@ package cafe.plastic.documentscanner.ui.data;
 
 import android.content.SharedPreferences;
 
+import androidx.annotation.Nullable;
 import androidx.lifecycle.MutableLiveData;
 
 abstract public class SharedPrefsLiveData<T> extends MutableLiveData<T> {
@@ -18,11 +19,15 @@ abstract public class SharedPrefsLiveData<T> extends MutableLiveData<T> {
         buildListener();
     }
 
-    public void set(T value) {
+    @Override
+    public void setValue(T value) {
         setPref(value);
+        super.setValue(value);
     }
 
-    public T get() {
+    @Nullable
+    @Override
+    public T getValue() {
         return super.getValue();
     }
 
