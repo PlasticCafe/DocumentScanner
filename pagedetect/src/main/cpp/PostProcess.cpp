@@ -26,7 +26,7 @@ namespace scanner {
         cv::cvtColor(input, gray, cv::COLOR_RGBA2GRAY);
         cv::GaussianBlur(gray, gray, cv::Size(frameScale / 200 | 1, frameScale / 200 | 1), 0);
         cv::adaptiveThreshold(gray, gray, 255, cv::ADAPTIVE_THRESH_MEAN_C, cv::THRESH_BINARY,
-                              frameScale / 238 | 1, 2);
+                              frameScale / 238 | 3, 2);
         //cv::Mat element = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3), cv::Point(-1, -1));
         //cv::morphologyEx(tmp, tmp, cv::MORPH_CLOSE, element);
         cv::cvtColor(gray, output, cv::COLOR_GRAY2RGBA);

@@ -13,9 +13,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.SeekBar;
 
-import com.github.chrisbanes.photoview.PhotoView;
-
-import java.util.concurrent.TimeUnit;
 
 import androidx.lifecycle.ViewModelProviders;
 import androidx.navigation.fragment.NavHostFragment;
@@ -36,16 +33,16 @@ public class ConfirmationFragment extends Fragment {
     public static String PREF_WORKING_IMAGE = "pref_working_image";
     public static String PREF_IMAGE_BRIGHTNESS = "pref_image_brightness";
     public static String PREF_IMAGE_CONTRAST = "pref_image_contrast";
+    public static String PERF_IMAGE_THRESH = "pref_image_thresh";
     public static String PREF_IMAGE_BOUNDS = "pref_image_bounds";
     public static String PREF_IMAGE_ROTATION = "pref_image_rotation";
 
     private String imageLocation;
     private Single<Bitmap> imageLoader;
-    private Bitmap originalImage;
-    private Bitmap scaledImage;
-    private Bitmap workingImage;
+    private Bitmap image;
     private boolean imageLoaded = false;
     private boolean faxOn = false;
+    private PostProcess postProcessor;
     private ConfirmationFragmentBinding binding;
     private ConfirmationViewModel viewModel;
     private PublishProcessor<Boolean> renderEvents;
@@ -109,43 +106,32 @@ public class ConfirmationFragment extends Fragment {
         observers.dispose();
     }
 
-    private void initialize() {
-
-
-    }
-
     private void setBitmaps(Bitmap sourceImage) {
-        originalImage = sourceImage;
-        scaledImage = getScaledBitmap(originalImage);
-        workingImage = scaledImage.copy(scaledImage.getConfig(), true);
+        image = sourceImage;
+        PostProcess.RenderConfiguration renderConfig = new PostProcess.RenderConfiguration(
+                viewModel.brightness.getValue(),
+                viewModel.contrast.getValue(),
+                faxOn);
+        postProcessor = new PostProcess(image, 0.25f, renderConfig);
         imageLoaded = true;
-    }
-
-    private Bitmap getScaledBitmap(Bitmap sourceImage) {
-        int width = sourceImage.getWidth();
-        int height = sourceImage.getHeight();
-        float factor = Math.min(1000.0f / width, 1000.0f / height);
-        if (factor > 1.0f) factor = 1.0f;
-        return Bitmap.createScaledBitmap(sourceImage, (int) (width * factor), (int) (height * factor), true);
+        render();
     }
 
     private void enableEditingUI() {
-        binding.image.setImageBitmap(workingImage);
+        binding.image.setImageBitmap(postProcessor.render());
     }
 
 
     private void render() {
-        int brightness = viewModel.brightness.getValue();
-        int contrast = viewModel.contrast.getValue();
-        if (imageLoaded) {
-            PostProcess.brightness(scaledImage, workingImage, (float) (brightness - 50) / 50.0f, (contrast) / 40.0f, false);
+        if(imageLoaded) {
+            PostProcess.RenderConfiguration config = new PostProcess.RenderConfiguration(
+                    viewModel.brightness.getValue(),
+                    viewModel.contrast.getValue(),
+                    faxOn);
+            postProcessor.updateRenderConfig(config);
+            binding.image.setImageBitmap(postProcessor.render());
+            binding.image.invalidate();
         }
-
-        if (faxOn) {
-
-            PostProcess.threshold(workingImage, workingImage);
-        }
-        binding.image.invalidate();
     }
 
     private void loadImage() {
@@ -158,10 +144,6 @@ public class ConfirmationFragment extends Fragment {
                         e -> {
                             NavHostFragment.findNavController(this).popBackStack();
                         }));
-    }
-
-    private void storePreferences() {
-
     }
 
     public class Handlers {

@@ -2,19 +2,80 @@ package cafe.plastic.pagedetect;
 
 import android.graphics.Bitmap;
 
+import java.util.Objects;
+
 public class PostProcess {
     private static native void Brightness(Bitmap input, Bitmap output, float brightness, float contrast, boolean same);
+
     private static native void Threshold(Bitmap input, Bitmap output);
-    private PostProcess() {
+
+    private Bitmap originalBitmap;
+    private Bitmap workingBitmap;
+    private RenderConfiguration config;
+    private boolean dirty = false;
+
+    public PostProcess(Bitmap bitmap, float scale, RenderConfiguration renderConfig) {
+        int width = (int) (bitmap.getWidth() * scale);
+        int height = (int) (bitmap.getHeight() * scale);
+        if (width % 2 != 0) width += 1;
+        if (height % 2 != 0) height += 1;
+        this.originalBitmap = Bitmap.createScaledBitmap(bitmap, width, height, true);
+        this.workingBitmap = originalBitmap.copy(originalBitmap.getConfig(), true);
+        this.config = renderConfig;
 
     }
 
-    public static void brightness(Bitmap input, Bitmap output, float brightness, float contrast, boolean same) {
-        Brightness(input, output, brightness, contrast, same);
+    public Bitmap render() {
+        if (dirty) {
+            renderBrightness();
+            if (config.threshold)
+                renderThreshold();
+            dirty = false;
+        }
+        return workingBitmap;
     }
 
-    public static void threshold(Bitmap input,  Bitmap output) {
-        Threshold(input, output);
+    public void updateRenderConfig(RenderConfiguration config) {
+        if (this.config != config) {
+            this.dirty = true;
+            this.config = config;
+        }
+    }
+
+    private void renderBrightness() {
+        Brightness(originalBitmap, workingBitmap, (float) (config.brightness - 50) / 50.0f, config.contrast / 40.0f, false);
+    }
+
+    private void renderThreshold() {
+        Threshold(workingBitmap, workingBitmap);
+    }
+
+
+    public static class RenderConfiguration {
+        final float brightness;
+        final float contrast;
+        final boolean threshold;
+
+        public RenderConfiguration(float brightness, float contrast, boolean threshold) {
+            this.brightness = brightness;
+            this.contrast = contrast;
+            this.threshold = threshold;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            RenderConfiguration that = (RenderConfiguration) o;
+            return brightness == that.brightness &&
+                    contrast == that.contrast &&
+                    threshold == that.threshold;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(brightness, contrast, threshold);
+        }
     }
 
 }
