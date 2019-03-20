@@ -2,6 +2,7 @@ package cafe.plastic.pagedetect;
 
 import android.graphics.Bitmap;
 
+import java.io.Serializable;
 import java.util.Objects;
 
 public class PostProcess {
@@ -51,15 +52,17 @@ public class PostProcess {
     }
 
 
-    public static class RenderConfiguration {
+    public static class RenderConfiguration implements Serializable {
         final float brightness;
         final float contrast;
         final boolean threshold;
+        final PageDetector.Region region;
 
-        public RenderConfiguration(float brightness, float contrast, boolean threshold) {
+        public RenderConfiguration(float brightness, float contrast, boolean threshold, PageDetector.Region region) {
             this.brightness = brightness;
             this.contrast = contrast;
             this.threshold = threshold;
+            this.region = region;
         }
 
         @Override
