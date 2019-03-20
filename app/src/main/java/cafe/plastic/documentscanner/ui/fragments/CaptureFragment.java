@@ -168,8 +168,8 @@ public class CaptureFragment extends Fragment {
 
     private Bitmap capture(PageDetector.Region region) throws ExecutionException, InterruptedException {
         Bitmap bitmap = fotoapparat.takePicture().toBitmap().await().bitmap;
-        
-        return pageTracker.processPhoto(bitmap, new PageDetector.Region(region));
+        return bitmap;
+        //return pageTracker.processPhoto(bitmap, new PageDetector.Region(region));
     }
 
     private void showCaptureUI() {
