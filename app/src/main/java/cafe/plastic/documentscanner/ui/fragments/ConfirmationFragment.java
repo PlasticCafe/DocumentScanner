@@ -108,11 +108,13 @@ public class ConfirmationFragment extends Fragment {
 
     private void setBitmaps(Bitmap sourceImage) {
         image = sourceImage;
-        PostProcess.RenderConfiguration renderConfig = new PostProcess.RenderConfiguration(
-                viewModel.brightness.getValue(),
-                viewModel.contrast.getValue(),
-                faxOn);
-        postProcessor = new PostProcess(image, 0.25f, renderConfig);
+        PostProcess.RenderConfiguration renderConfig = new PostProcess.RenderConfiguration.Builder(sourceImage)
+                .brightness(viewModel.brightness.getValue())
+                .scale(0.25f)
+                .threshold(faxOn)
+                .contrast(viewModel.contrast.getValue())
+                .build();
+        postProcessor = new PostProcess(image, renderConfig);
         imageLoaded = true;
         render();
     }
@@ -124,10 +126,11 @@ public class ConfirmationFragment extends Fragment {
 
     private void render() {
         if(imageLoaded) {
-            PostProcess.RenderConfiguration config = new PostProcess.RenderConfiguration(
-                    viewModel.brightness.getValue(),
-                    viewModel.contrast.getValue(),
-                    faxOn);
+            PostProcess.RenderConfiguration config = new PostProcess.RenderConfiguration.Builder(image)
+                    .brightness(viewModel.brightness.getValue())
+                    .contrast(viewModel.contrast.getValue())
+                    .threshold(faxOn)
+                    .build();
             postProcessor.updateRenderConfig(config);
             binding.image.setImageBitmap(postProcessor.render());
             binding.image.invalidate();

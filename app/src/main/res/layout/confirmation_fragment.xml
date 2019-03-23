@@ -20,12 +20,11 @@
         android:background="@color/colorPrimary"
         tools:context=".ui.fragments.ConfirmationFragment">
 
-        <!-- TODO: Update blank fragment layout -->
-
         <ImageView
             android:id="@+id/image"
             android:layout_width="0dp"
             android:layout_height="0dp"
+            android:scaleType="fitCenter"
             app:layout_constraintBottom_toTopOf="@+id/sliders_background"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
