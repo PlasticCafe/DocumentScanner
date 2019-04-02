@@ -14,6 +14,8 @@ import android.view.ViewGroup;
 import android.widget.SeekBar;
 
 
+import java.io.FileNotFoundException;
+
 import androidx.lifecycle.ViewModelProviders;
 import androidx.navigation.fragment.NavHostFragment;
 import cafe.plastic.documentscanner.R;
@@ -37,9 +39,8 @@ public class ConfirmationFragment extends Fragment {
     public static String PREF_IMAGE_BOUNDS = "pref_image_bounds";
     public static String PREF_IMAGE_ROTATION = "pref_image_rotation";
 
-    private String imageLocation;
-    private Single<Bitmap> imageLoader;
-    private Bitmap image;
+    private Single<PostProcess.RenderConfiguration> imageLoader;
+    private PostProcess.RenderConfiguration config;
     private boolean imageLoaded = false;
     private boolean faxOn = false;
     private PostProcess postProcessor;
@@ -50,11 +51,10 @@ public class ConfirmationFragment extends Fragment {
 
     public ConfirmationFragment() {
         imageLoader = Single
-                .<Bitmap>create(s -> {
+                .<PostProcess.RenderConfiguration>create(s -> {
                     try {
-                        TempImageManager.getInstance(getContext()).clearAllExcept(imageLocation);
-                        Bitmap bitmap = TempImageManager.getInstance(getContext()).loadTempBitmap(imageLocation);
-                        s.onSuccess(bitmap);
+                        PostProcess.RenderConfiguration config = TempImageManager.getInstance(getContext()).loadTempBitmap();
+                        s.onSuccess(config);
                     } catch (Exception e) {
                         s.onError(e);
                     }
@@ -77,7 +77,6 @@ public class ConfirmationFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        imageLocation = ConfirmationFragmentArgs.fromBundle(getArguments()).getImageFileName();
         binding.setHandlers(new Handlers());
         binding.setViewmodel(viewModel);
     }
@@ -104,17 +103,18 @@ public class ConfirmationFragment extends Fragment {
     public void onPause() {
         super.onPause();
         observers.dispose();
+        try {
+            TempImageManager.getInstance(getContext()).clearImage();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
     }
 
-    private void setBitmaps(Bitmap sourceImage) {
-        image = sourceImage;
-        PostProcess.RenderConfiguration renderConfig = new PostProcess.RenderConfiguration.Builder(sourceImage)
-                .brightness(viewModel.brightness.getValue())
-                .scale(0.25f)
-                .threshold(faxOn)
-                .contrast(viewModel.contrast.getValue())
-                .build();
-        postProcessor = new PostProcess(image, renderConfig);
+    private void setConfig(PostProcess.RenderConfiguration config) {
+        this.config = config;
+        postProcessor = new PostProcess(this.config);
+        viewModel.brightness.setValue((int)config.brightness);
+        viewModel.contrast.setValue((int)config.contrast);
         imageLoaded = true;
         render();
     }
@@ -126,12 +126,14 @@ public class ConfirmationFragment extends Fragment {
 
     private void render() {
         if(imageLoaded) {
-            PostProcess.RenderConfiguration config = new PostProcess.RenderConfiguration.Builder(image)
+            PostProcess.RenderConfiguration config = new PostProcess.RenderConfiguration.Builder(this.config.bitmap)
                     .brightness(viewModel.brightness.getValue())
                     .contrast(viewModel.contrast.getValue())
                     .threshold(faxOn)
+                    .region(this.config.region)
+                    .rotation(this.config.rotation)
                     .build();
-            postProcessor.updateRenderConfig(config);
+            postProcessor.updateConfig(config);
             binding.image.setImageBitmap(postProcessor.render());
             binding.image.invalidate();
         }
@@ -140,8 +142,8 @@ public class ConfirmationFragment extends Fragment {
     private void loadImage() {
         observers.add(
                 imageLoader.subscribe(
-                        b -> {
-                            setBitmaps(b);
+                        c -> {
+                            setConfig(c);
                             enableEditingUI();
                         },
                         e -> {

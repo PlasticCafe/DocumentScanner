@@ -12,11 +12,10 @@ namespace scanner {
         if(brightness < -1.0) brightness = -1.0f;
         contrast = contrast + 1;
         int8_t brightInt = brightness * 127;
-        cv::Scalar brightFactor = cv::Scalar(brightInt, brightInt, brightInt);
-        cv::Scalar contrastFactor = cv::Scalar(contrast, contrast, contrast);
-        input.convertTo(output, -1, contrast, brightInt);
-        //cv::multiply(input, contrastFactor, output);
-        //cv::add(output, brightFactor, output);
+        cv::Scalar brightFactor = cv::Scalar(brightInt, brightInt, brightInt, 0);
+        cv::Scalar contrastFactor = cv::Scalar(contrast, contrast, contrast, 1);
+        cv::multiply(input, contrastFactor, output);
+        cv::add(output, brightFactor, output);
         return;
     }
 

@@ -3,6 +3,8 @@ package cafe.plastic.pagedetect;
 import android.graphics.Path;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Objects;
 
 public class Quad {
     private final ArrayList<Vec2> mPoints = new ArrayList<>();
@@ -108,5 +110,23 @@ public class Quad {
             vecs[i * 2 + 1] = mPoints.get(i).getY();
         }
         return vecs;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Quad quad = (Quad) o;
+        float[] thisPoints = toFloatArray();
+        float[] thatPoints = quad.toFloatArray();
+        for(int i = 0; i < thisPoints.length; i++) {
+            if(thisPoints[i] != thatPoints[i]) return false;
+        }
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        return Arrays.hashCode(toFloatArray());
     }
 }

@@ -24,14 +24,18 @@ import android.view.ViewGroup;
 import android.view.animation.LinearInterpolator;
 import android.widget.Toast;
 
+import java.io.IOException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import androidx.transition.TransitionManager;
 import cafe.plastic.documentscanner.R;
 import cafe.plastic.documentscanner.databinding.CaptureFragmentBinding;
+import cafe.plastic.documentscanner.util.TempImageManager;
 import cafe.plastic.documentscanner.vision.ObjectTracker;
 import cafe.plastic.pagedetect.PageDetector;
+import cafe.plastic.pagedetect.PostProcess;
+import cafe.plastic.pagedetect.Quad;
 import io.fotoapparat.Fotoapparat;
 import io.fotoapparat.configuration.CameraConfiguration;
 import io.fotoapparat.parameter.ScaleType;
@@ -39,7 +43,6 @@ import io.fotoapparat.selector.FlashSelectorsKt;
 import io.reactivex.Flowable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.CompositeDisposable;
-import io.reactivex.processors.PublishProcessor;
 import io.reactivex.schedulers.Schedulers;
 import io.reactivex.schedulers.Timed;
 import timber.log.Timber;
@@ -96,6 +99,7 @@ public class CaptureFragment extends Fragment {
         binding.setViewmodel(viewModel);
         binding.setLifecycleOwner(this);
         requestPermissions(new String[]{Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE}, 0);
+
     }
 
     private void initializeResume() {
@@ -135,8 +139,7 @@ public class CaptureFragment extends Fragment {
         observers.add(
                 configureDetectionObserver()
                         .subscribe(s -> {
-                            CaptureFragmentDirections.ConfirmAction action = CaptureFragmentDirections.confirmAction(s);
-                            NavHostFragment.findNavController(CaptureFragment.this).navigate(action);
+                            NavHostFragment.findNavController(CaptureFragment.this).navigate(CaptureFragmentDirections.confirmAction());
                         }));
     }
 
@@ -144,7 +147,7 @@ public class CaptureFragment extends Fragment {
         observers.clear();
     }
 
-    private Flowable<String> configureDetectionObserver() {
+    private Flowable<PostProcess.RenderConfiguration> configureDetectionObserver() {
         return detectionEvents
                 .sample(200, TimeUnit.MILLISECONDS)
                 .observeOn(AndroidSchedulers.mainThread())
@@ -158,7 +161,7 @@ public class CaptureFragment extends Fragment {
                 .observeOn(Schedulers.computation())
                 .map(e -> capture(e.second))
                 .observeOn(Schedulers.io())
-                .map(viewModel.imageManager::storeTempBitmap)
+                .doOnNext(viewModel.imageManager::storeTempImage)
                 .observeOn(AndroidSchedulers.mainThread())
                 .doOnNext((s) -> {
                     Timber.d("Image saved to: %s", s);
@@ -166,10 +169,18 @@ public class CaptureFragment extends Fragment {
                 });
     }
 
-    private Bitmap capture(PageDetector.Region region) throws ExecutionException, InterruptedException {
+    private PostProcess.RenderConfiguration capture(PageDetector.Region region) throws ExecutionException, InterruptedException {
         Bitmap bitmap = fotoapparat.takePicture().toBitmap().await().bitmap;
-        return bitmap;
-        //return pageTracker.processPhoto(bitmap, new PageDetector.Region(region));
+        PostProcess.RenderConfiguration.Builder builder = new PostProcess.RenderConfiguration.Builder(bitmap);
+        Quad roi = region.roi.copy();
+        roi.scale((float)bitmap.getWidth()/region.frameSize.getWidth());
+        return builder.brightness(50.0f)
+                .contrast(1.0f)
+                .region(roi)
+                .threshold(false)
+                .rotation(region.rotation)
+                .scale(0.25f)
+                .build();
     }
 
     private void showCaptureUI() {

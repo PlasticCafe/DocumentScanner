@@ -5,7 +5,17 @@ import android.graphics.Canvas;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 
+import java.io.DataInputStream;
+import java.io.DataOutput;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.Serializable;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Objects;
 
 public class PostProcess {
@@ -14,37 +24,47 @@ public class PostProcess {
     private static native void Threshold(Bitmap input, Bitmap output);
 
     RenderConfiguration config;
-    RenderConfiguration oldConfig;
     Bitmap scaledBitmap;
     Bitmap workingBitmap;
-    private boolean dirty = false;
+    private boolean renderBitmaps = true;
+    private boolean renderBrightness = true;
+    private boolean renderThreshold = true;
 
-    public PostProcess(Bitmap bitmap, RenderConfiguration renderConfig) {
+    public PostProcess(RenderConfiguration renderConfig) {
         this.config = renderConfig;
-        dirty = true;
-        createBitmaps();
+
+    }
+
+    public void updateConfig(RenderConfiguration config) {
+        if(this.config.bitmap != config.bitmap ||
+                !this.config.region.equals(config.region) ||
+                this.config.rotation != config.rotation ||
+                this.config.scale != config.scale)
+            renderBitmaps = true;
+        if(this.config.brightness != config.brightness || this.config.contrast != config.contrast)
+            renderBrightness = true;
+        if(this.config.threshold != config.threshold)
+            renderThreshold = true;
+        this.config = config;
     }
 
     public Bitmap render() {
-        if (dirty) {
-            if (oldConfig == null || config.bitmap != oldConfig.bitmap) {
-                createBitmaps();
-            }
+        if(renderBitmaps) {
+            createBitmaps();
             renderBrightness();
-            if (config.threshold)
-                renderThreshold();
-            dirty = false;
+            renderThreshold();
         }
+        else if(renderBrightness || renderThreshold) {
+            renderBrightness();
+            renderThreshold();
+        }
+        renderBitmaps = false;
+        renderBrightness = false;
+        renderThreshold = false;
+
         return workingBitmap;
     }
 
-    public void updateRenderConfig(RenderConfiguration config) {
-        if (this.config != config) {
-            this.dirty = true;
-            this.oldConfig = this.config;
-            this.config = config;
-        }
-    }
 
     private void createBitmaps() {
         scaledBitmap = cropBitmap();
@@ -59,7 +79,7 @@ public class PostProcess {
         Quad roi = config.region.copy();
         roi.scale(config.scale);
         Vec2 dims = roi.getDimensions();
-        Bitmap processed = Bitmap.createBitmap((int)dims.getX(), (int)dims.getY(), Bitmap.Config.ARGB_8888);
+        Bitmap processed = Bitmap.createBitmap((int) dims.getX(), (int) dims.getY(), Bitmap.Config.ARGB_8888);
         Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
         Canvas c = new Canvas(processed);
         Matrix warp = new Matrix();
@@ -72,7 +92,7 @@ public class PostProcess {
         };
         warp.setPolyToPoly(src, 0, dst, 0, 4);
         c.drawBitmap(tempScaledBitmap, warp, p);
-        matrix.postRotate(-1*config.rotation);
+        matrix.postRotate(-1 * config.rotation);
         processed = Bitmap.createBitmap(processed, 0, 0, processed.getWidth(), processed.getHeight(), matrix, false);
         return processed;
     }
@@ -82,18 +102,54 @@ public class PostProcess {
     }
 
     private void renderThreshold() {
-        Threshold(workingBitmap, workingBitmap);
+        if (config.threshold)
+            Threshold(workingBitmap, workingBitmap);
     }
 
 
     public static class RenderConfiguration {
-        private Bitmap bitmap;
-        private float scale;
-        private float brightness;
-        private float contrast;
-        private boolean threshold;
-        private Quad region;
-        private int rotation;
+        public Bitmap bitmap;
+        public float scale;
+        public float brightness;
+        public float contrast;
+        public boolean threshold;
+        public int rotation;
+        public Quad region;
+
+        public void writeToFile(File file) throws IOException {
+            DataOutputStream outputStream = new DataOutputStream(new FileOutputStream(file));
+            float[] regionArray = region.toFloatArray();
+            outputStream.writeFloat(scale);
+            outputStream.writeFloat(brightness);
+            outputStream.writeFloat(contrast);
+            outputStream.writeBoolean(threshold);
+            outputStream.writeInt(rotation);
+            for (float coord : regionArray) {
+                outputStream.writeFloat(coord);
+            }
+            outputStream.close();
+        }
+
+        public static RenderConfiguration readFromFile(File file, Bitmap bitmap) throws IOException {
+            RenderConfiguration.Builder builder = new RenderConfiguration.Builder(bitmap);
+            DataInputStream inputStream = new DataInputStream(new FileInputStream(file));
+            builder.scale(inputStream.readFloat());
+            builder.brightness(inputStream.readFloat());
+            builder.contrast(inputStream.readFloat());
+            builder.threshold(inputStream.readBoolean());
+            builder.rotation(inputStream.readInt());
+            Quad region = new Quad();
+            ArrayList<Vec2> regionArray = new ArrayList<>();
+            for (int i = 0; i < 4; i++) {
+                float x = inputStream.readFloat();
+                float y = inputStream.readFloat();
+                regionArray.add(new Vec2(x, y));
+            }
+            region.set(regionArray);
+            builder.region(region);
+            inputStream.close();
+            return builder.build();
+        }
 
         @Override
         public boolean equals(Object o) {
@@ -132,12 +188,12 @@ public class PostProcess {
                 return this;
             }
 
-            public Builder brightness(int brightness) {
+            public Builder brightness(float brightness) {
                 this.brightness = brightness;
                 return this;
             }
 
-            public Builder contrast(int contrast) {
+            public Builder contrast(float contrast) {
                 this.contrast = contrast;
                 return this;
             }
