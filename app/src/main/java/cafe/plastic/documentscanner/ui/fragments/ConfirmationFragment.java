@@ -102,12 +102,6 @@ public class ConfirmationFragment extends Fragment {
     @Override
     public void onPause() {
         super.onPause();
-        observers.dispose();
-        try {
-            TempImageManager.getInstance(getContext()).clearImage();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }
     }
 
     private void setConfig(PostProcess.RenderConfiguration config) {
