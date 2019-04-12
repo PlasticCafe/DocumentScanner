@@ -30,7 +30,7 @@ import io.reactivex.schedulers.Schedulers;
 import timber.log.Timber;
 
 @SuppressWarnings("WeakerAccess")
-public class ConfirmationFragment extends Fragment {
+public class ConfirmationFragment extends Fragment implements BackButtonPressed{
 
     public static String PREF_WORKING_IMAGE = "pref_working_image";
     public static String PREF_IMAGE_BRIGHTNESS = "pref_image_brightness";
@@ -143,6 +143,11 @@ public class ConfirmationFragment extends Fragment {
                         e -> {
                             NavHostFragment.findNavController(this).popBackStack();
                         }));
+    }
+
+    @Override
+    public void onSupportNavigateUp() {
+        Timber.d("onSupportNavigateUp");
     }
 
     public class Handlers {

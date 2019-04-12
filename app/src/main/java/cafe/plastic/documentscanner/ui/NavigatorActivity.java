@@ -6,6 +6,7 @@ import android.os.Bundle;
 
 import androidx.navigation.Navigation;
 import cafe.plastic.documentscanner.R;
+import cafe.plastic.documentscanner.ui.fragments.BackButtonPressed;
 
 public class NavigatorActivity extends AppCompatActivity {
     @Override
@@ -19,7 +20,11 @@ public class NavigatorActivity extends AppCompatActivity {
 
     @Override
     public boolean onSupportNavigateUp() {
-        Navigation.findNavController(this, R.id.nav_host_fragment).
+        BackButtonPressed fragment = (BackButtonPressed) getSupportFragmentManager()
+                .findFragmentById(R.id.nav_host_fragment)
+                .getChildFragmentManager().getFragments()
+                .get(0);
+        fragment.onSupportNavigateUp();
         return Navigation.findNavController(this, R.id.nav_host_fragment).navigateUp();
     }
 }

@@ -11,8 +11,9 @@ import androidx.fragment.app.Fragment;
 import androidx.navigation.fragment.NavHostFragment;
 import cafe.plastic.documentscanner.util.TempImageManager;
 import cafe.plastic.pagedetect.PostProcess;
+import timber.log.Timber;
 
-public class MainFragment extends Fragment {
+public class MainFragment extends Fragment implements BackButtonPressed{
     @Override
     public void onResume() {
         super.onResume();
@@ -23,11 +24,16 @@ public class MainFragment extends Fragment {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        if (config != null) {
-            NavHostFragment.findNavController(this).navigate(MainFragmentDirections.actionMainFragmentToConfirmFragment());
+        if (config == null) {
+//            NavHostFragment.findNavController(this).navigate(MainFragmentDirections.actionMainFragmentToConfirmFragment());
 
         } else {
             NavHostFragment.findNavController(this).navigate(MainFragmentDirections.actionMainFragmentToCaptureFragment());
         }
+    }
+
+    @Override
+    public void onSupportNavigateUp() {
+        Timber.d("onSupportNavigateUp");
     }
 }

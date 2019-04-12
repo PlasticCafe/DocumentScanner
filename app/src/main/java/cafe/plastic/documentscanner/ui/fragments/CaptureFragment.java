@@ -47,7 +47,7 @@ import io.reactivex.schedulers.Schedulers;
 import io.reactivex.schedulers.Timed;
 import timber.log.Timber;
 
-public class CaptureFragment extends Fragment {
+public class CaptureFragment extends Fragment implements BackButtonPressed {
     private static final long MAX_LOCK_TIME = 2300;
     private CaptureViewModel viewModel;
     private Fotoapparat fotoapparat;
@@ -221,6 +221,11 @@ public class CaptureFragment extends Fragment {
         transition.setDuration(time);
         TransitionManager.beginDelayedTransition(binding.constraintLayout, transition);
         target.applyTo(binding.constraintLayout);
+    }
+
+    @Override
+    public void onSupportNavigateUp() {
+        Timber.d("onSupportNavigateUp");
     }
 
     public class Handlers {
