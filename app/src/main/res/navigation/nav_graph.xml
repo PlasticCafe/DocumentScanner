@@ -1,20 +1,7 @@
 <navigation xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    app:startDestination="@id/mainFragment">
-    <fragment
-        android:id="@+id/mainFragment"
-        android:name="cafe.plastic.documentscanner.ui.fragments.MainFragment"
-        android:label="main_fragment"
-        tools:layout="@layout/main_fragment">
-
-        <action
-            android:id="@+id/action_mainFragment_to_captureFragment"
-            app:destination="@id/captureFragment" />
-        <action
-            android:id="@+id/action_mainFragment_to_confirmFragment"
-            app:destination="@id/confirmFragment" />
-    </fragment>
+    app:startDestination="@id/captureFragment">
     <fragment
         android:id="@+id/captureFragment"
         android:name="cafe.plastic.documentscanner.ui.fragments.CaptureFragment"

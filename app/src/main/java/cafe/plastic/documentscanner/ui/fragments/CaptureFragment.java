@@ -14,6 +14,7 @@ import android.os.Bundle;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.navigation.Navigation;
 import androidx.navigation.fragment.NavHostFragment;
 import androidx.transition.ChangeBounds;
 
@@ -71,9 +72,23 @@ public class CaptureFragment extends Fragment implements BackButtonPressed {
     }
 
     @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+        try {
+            if(TempImageManager.getInstance(getContext()).loadTempBitmap() != null) {
+                openConfirmationFragment();
+                return;
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
     public void onResume() {
         super.onResume();
         Timber.d("onResume");
+        initialize();
         initializeResume();
     }
 
@@ -98,7 +113,7 @@ public class CaptureFragment extends Fragment implements BackButtonPressed {
         viewModel.captureMode.observe(this, o -> configureCamera());
         binding.setViewmodel(viewModel);
         binding.setLifecycleOwner(this);
-        requestPermissions(new String[]{Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE}, 0);
+        //requestPermissions(new String[]{Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE}, 0);
 
     }
 
@@ -106,9 +121,24 @@ public class CaptureFragment extends Fragment implements BackButtonPressed {
         initializeCamera();
         configureObservers();
         hideLoadingUI();
+        try {
+            if(TempImageManager.getInstance(getContext()).loadTempBitmap() != null) {
+                openConfirmationFragment();
+                return;
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void openConfirmationFragment() {
+        Timber.d("Opening confirmation fragment.");
+        Navigation.findNavController(getView()).navigate(CaptureFragmentDirections.confirmAction());
     }
 
     private void initializeCamera() {
+        Timber.d("Initializing camera");
+        if(fotoapparat != null) fotoapparat.stop();
         fotoapparat = Fotoapparat.with(requireActivity())
                 .into(binding.cameraView
                 )
@@ -121,6 +151,7 @@ public class CaptureFragment extends Fragment implements BackButtonPressed {
     }
 
     private void configureCamera() {
+        Timber.d("Configuring camera");
         CameraConfiguration.Builder builder = new CameraConfiguration.Builder();
         switch (viewModel.flashMode.getValue()) {
             case OFF:
@@ -133,13 +164,14 @@ public class CaptureFragment extends Fragment implements BackButtonPressed {
                 builder.flash(FlashSelectorsKt.off());
         }
         fotoapparat.updateConfiguration(builder.build());
+        fotoapparat.start();
     }
 
     private void configureObservers() {
         observers.add(
                 configureDetectionObserver()
                         .subscribe(s -> {
-                            NavHostFragment.findNavController(CaptureFragment.this).navigate(CaptureFragmentDirections.confirmAction());
+                            openConfirmationFragment();
                         }));
     }
 
@@ -179,16 +211,18 @@ public class CaptureFragment extends Fragment implements BackButtonPressed {
                 .region(roi)
                 .threshold(false)
                 .rotation(region.rotation)
-                .scale(0.25f)
+                .scale(0.30f)
                 .build();
     }
 
     private void showCaptureUI() {
+        Timber.d("Showing capture ui");
         animate(R.layout.capture_fragment_capturing_on, 120, new LinearInterpolator());
         viewModel.captureState.setValue(PageDetector.State.CAPTURE);
     }
 
     private void hideLoadingUI() {
+        Timber.d("Hiding capture ui");
         animate(R.layout.capture_fragment_capturing_off, 120, new LinearInterpolator());
     }
 
@@ -225,7 +259,8 @@ public class CaptureFragment extends Fragment implements BackButtonPressed {
 
     @Override
     public void onSupportNavigateUp() {
-        Timber.d("onSupportNavigateUp");
+        Timber.d("onSupportNavigateUp Capture Fragment");
+        NavHostFragment.findNavController(this).popBackStack();
     }
 
     public class Handlers {

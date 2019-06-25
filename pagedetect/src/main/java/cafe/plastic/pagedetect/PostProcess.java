@@ -179,6 +179,16 @@ public class PostProcess {
             private Quad region;
             private int rotation = 0;
 
+            public Builder(PostProcess.RenderConfiguration config) {
+                this.bitmap = config.bitmap;
+                this.scale = config.scale;
+                this.brightness = config.brightness;
+                this.contrast = config.contrast;
+                this.threshold = config.threshold;
+                this.region = config.region.copy();
+                this.rotation = config.rotation;
+            }
+
             public Builder(Bitmap bitmap) {
                 this.bitmap = bitmap;
             }
