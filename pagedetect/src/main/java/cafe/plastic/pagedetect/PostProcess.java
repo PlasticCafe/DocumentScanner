@@ -92,7 +92,7 @@ public class PostProcess {
         };
         warp.setPolyToPoly(src, 0, dst, 0, 4);
         c.drawBitmap(tempScaledBitmap, warp, p);
-        matrix.postRotate(-1 * config.rotation);
+        //matrix.postRotate(-1 * config.rotation);
         processed = Bitmap.createBitmap(processed, 0, 0, processed.getWidth(), processed.getHeight(), matrix, false);
         return processed;
     }

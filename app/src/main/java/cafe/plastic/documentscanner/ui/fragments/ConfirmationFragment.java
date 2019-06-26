@@ -83,6 +83,7 @@ public class ConfirmationFragment extends Fragment implements BackButtonPressed 
                 .build();
         postProcessor.updateConfig(config);
         binding.image.setBitmap(postProcessor.render());
+        binding.image.setRotation(viewModel.config.rotation);
         binding.image.invalidate();
     }
 
