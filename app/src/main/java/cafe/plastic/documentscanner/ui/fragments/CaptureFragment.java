@@ -32,7 +32,7 @@ import java.util.concurrent.TimeUnit;
 import androidx.transition.TransitionManager;
 import cafe.plastic.documentscanner.R;
 import cafe.plastic.documentscanner.databinding.CaptureFragmentBinding;
-import cafe.plastic.documentscanner.util.TempImageManager;
+import cafe.plastic.documentscanner.util.WorkingImageManager;
 import cafe.plastic.documentscanner.vision.ObjectTracker;
 import cafe.plastic.pagedetect.PageDetector;
 import cafe.plastic.pagedetect.PostProcess;
@@ -75,7 +75,7 @@ public class CaptureFragment extends Fragment implements BackButtonPressed {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         try {
-            if(TempImageManager.getInstance(getContext()).loadTempBitmap() != null) {
+            if(WorkingImageManager.getInstance(getContext()).loadTempBitmap() != null) {
                 openConfirmationFragment();
                 return;
             }
@@ -113,16 +113,16 @@ public class CaptureFragment extends Fragment implements BackButtonPressed {
         viewModel.captureMode.observe(this, o -> configureCamera());
         binding.setViewmodel(viewModel);
         binding.setLifecycleOwner(this);
-        requestPermissions(new String[]{Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE}, 0);
+        //requestPermissions(new String[]{Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE}, 0);
 
     }
 
     private void initializeResume() {
         initializeCamera();
         configureObservers();
-        hideLoadingUI();
+        //hideLoadingUI();
         try {
-            if(TempImageManager.getInstance(getContext()).loadTempBitmap() != null) {
+            if(WorkingImageManager.getInstance(getContext()).loadTempBitmap() != null) {
                 openConfirmationFragment();
                 return;
             }

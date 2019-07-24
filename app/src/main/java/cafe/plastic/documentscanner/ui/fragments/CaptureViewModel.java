@@ -7,7 +7,7 @@ import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LifecycleObserver;
 import androidx.lifecycle.MutableLiveData;
 import cafe.plastic.documentscanner.ui.data.SafeLiveData;
-import cafe.plastic.documentscanner.util.TempImageManager;
+import cafe.plastic.documentscanner.util.WorkingImageManager;
 import cafe.plastic.pagedetect.PageDetector;
 
 public class CaptureViewModel extends AndroidViewModel implements LifecycleObserver {
@@ -16,11 +16,11 @@ public class CaptureViewModel extends AndroidViewModel implements LifecycleObser
     public final SafeLiveData<CameraState.CaptureMode> captureMode = new SafeLiveData<>(CameraState.CaptureMode.AUTO);
     public final MutableLiveData<PageDetector.State>  captureState = new MutableLiveData<>();
     public final MutableLiveData<Bitmap> currentPhoto = new MutableLiveData<>();
-    public final TempImageManager imageManager;
+    public final WorkingImageManager imageManager;
 
     public CaptureViewModel(Application application) {
         super(application);
-        imageManager = TempImageManager.getInstance(application);
+        imageManager = WorkingImageManager.getInstance(application);
     }
 
 }
