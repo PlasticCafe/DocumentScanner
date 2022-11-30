@@ -89,22 +89,24 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent" />
 
-        <ImageButton
+        <ToggleButton
             android:id="@+id/toggle_fax"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:layout_marginStart="16dp"
             android:layout_marginBottom="8dp"
-            android:onClickListener="@{handlers.toggleFax}"
-            android:tint="@android:color/darker_gray"
+            android:textOn=""
+            android:textOff=""
+            android:background="@drawable/thresh_toggle_selector"
+            android:onCheckedChanged="@{handlers.toggleFax}"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:srcCompat="@drawable/ic_threshold_on" />
+            />
 
         <ImageButton
             android:id="@+id/rotate"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:layout_marginStart="8dp"
             android:layout_marginBottom="8dp"
             android:onClickListener="@{handlers.rotate}"
